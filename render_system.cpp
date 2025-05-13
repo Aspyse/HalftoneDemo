@@ -1,4 +1,7 @@
 #include "render_system.h"
+#include "camera.h"
+#include "model.h"
+#include "color_shader.h"
 #include "imgui_impl_dx11.h"
 
 RenderSystem::RenderSystem() {};
@@ -27,7 +30,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 	CreateDepthStencilState();
 	CreateDepthBuffer();
 
-	//pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, depthStencilView);
+	pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, depthStencilView);
 
 	CreateRasterizerState();
 	InitializeViewport();
@@ -36,7 +39,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 	return true;
 }
 
-bool RenderSystem::Frame()
+bool RenderSystem::Render()
 {
 	// Clear the buffers to begin the scene
 	BeginScene();

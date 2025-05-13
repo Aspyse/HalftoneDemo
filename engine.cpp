@@ -84,7 +84,7 @@ bool Engine::Frame()
 	if (!result)
 		return false;
 
-	result = render_system->Frame();
+	result = render_system->Render();
 	if (!result)
 		return false;
 

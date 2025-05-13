@@ -14,9 +14,7 @@ public:
 
 	bool Initialize(HWND, WNDCLASSEXW, InputSystem*);
 	void Shutdown();
-	bool Frame();
-
-
+	bool Render();
 
 private:
 	void BeginScene();
@@ -43,6 +41,9 @@ private:
 
 private:
 	InputSystem* input_handle = nullptr;
+	CameraClass* camera = nullptr;
+	ModelClass* model = nullptr;
+	ColorShader* color_shader = nullptr;
 
 	bool SwapChainOccluded = false;
 
