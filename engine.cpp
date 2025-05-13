@@ -1,6 +1,7 @@
 #include "engine.h"
-#include "gui_system.h"
 #include "input_system.h"
+#include "gui_system.h"
+#include "render_system.h"
 
 Engine::Engine() {}
 Engine::Engine(const Engine& other) {}
@@ -16,14 +17,23 @@ bool Engine::Initialize()
 	gui_system = new GuiSystem;
 	gui_system->Initialize(input_system);
 
-	//render_system = new RenderSystem;
-	//render_system->Initialize();
+	HWND hwnd = gui_system->GetHWND();
+	WNDCLASSEXW wc = gui_system->GetWC();
+
+	render_system = new RenderSystem;
+	render_system->Initialize(hwnd, wc, input_system);
 
 	return true; // TEMP
 }
 
 void Engine::Shutdown()
 {
+	if (render_system)
+	{
+		render_system->Shutdown();
+		delete render_system;
+		render_system = nullptr;
+	}
 	if (gui_system)
 	{
 		gui_system->Shutdown();
@@ -35,8 +45,6 @@ void Engine::Shutdown()
 		delete input_system;
 		input_system = nullptr;
 	}
-
-	return;
 }
 
 void Engine::Run()
@@ -73,6 +81,10 @@ bool Engine::Frame()
 		return false;
 
 	result = gui_system->Frame();
+	if (!result)
+		return false;
+
+	result = render_system->Frame();
 	if (!result)
 		return false;
 

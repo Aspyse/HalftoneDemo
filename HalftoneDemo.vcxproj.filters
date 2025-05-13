@@ -16,6 +16,9 @@
     <Filter Include="Source Files\ImGui">
       <UniqueIdentifier>{aa50ad68-e582-4aa6-a23c-f2e736fe6c48}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shaders">
+      <UniqueIdentifier>{02a7c647-566e-4b40-811f-31caa6b384d1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -92,5 +95,11 @@
     <ClInclude Include="imgui\backends\imgui_impl_win32.h">
       <Filter>Source Files\ImGui</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="color.vs">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="color.ps" />
   </ItemGroup>
 </Project>

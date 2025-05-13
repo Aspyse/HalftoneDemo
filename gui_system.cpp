@@ -1,5 +1,4 @@
 #include "gui_system.h"
-#include "input_system.h"
 #include "render_system.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -42,9 +41,6 @@ bool GuiSystem::Initialize(InputSystem* inputHandle)
 	// Setup ImGui style
 	ImGui::StyleColorsDark();
 
-	render_system = new RenderSystem;
-	render_system->Initialize(hwnd, wc);
-
 	// Setup backends
 	ImGui_ImplWin32_Init(hwnd);
 
@@ -53,7 +49,6 @@ bool GuiSystem::Initialize(InputSystem* inputHandle)
 
 void GuiSystem::Shutdown()
 {
-	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
@@ -78,11 +73,18 @@ bool GuiSystem::Frame()
 	}
 
 	ImGui::Render();
-	render_system->BeginScene();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-	render_system->EndScene();
 
 	return true;
+}
+
+HWND GuiSystem::GetHWND()
+{
+	return hwnd;
+}
+
+WNDCLASSEXW GuiSystem::GetWC()
+{
+	return wc;
 }
 
 // Forward declare message handler from imgui_impl_win32.cpp

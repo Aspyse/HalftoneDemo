@@ -17,6 +17,9 @@ public:
 	void Shutdown();
 	bool Frame();
 
+	WNDCLASSEXW GetWC();
+	HWND GetHWND();
+
 private:
 	WNDCLASSEXW wc;
 	HWND hwnd = nullptr;
