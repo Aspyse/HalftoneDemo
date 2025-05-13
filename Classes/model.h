@@ -25,6 +25,6 @@ public:
 	int GetIndexCount();
 
 private:
-	ID3D11Buffer *vertexBuffer = nullptr, *indexBuffer = nullptr;
-	int vertexCount = 0, indexCount = 0;
+	ID3D11Buffer *m_vertexBuffer = nullptr, *m_indexBuffer = nullptr;
+	int m_vertexCount = 0, m_indexCount = 0;
 };

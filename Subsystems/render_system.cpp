@@ -1,7 +1,4 @@
 #include "render_system.h"
-#include "camera.h"
-#include "model.h"
-#include "color_shader.h"
 #include "imgui_impl_dx11.h"
 
 RenderSystem::RenderSystem() {};
@@ -13,9 +10,9 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 	RECT rect;
 	GetClientRect(hwnd, &rect);
 
-	screenWidth = rect.right - rect.left;
-	screenHeight = rect.bottom - rect.top;
-	input_handle = inputHandle;
+	m_screenWidth = rect.right - rect.left;
+	m_screenHeight = rect.bottom - rect.top;
+	m_inputHandle = inputHandle;
 	// Initialize Direct3D
 	if (!CreateDeviceD3D(hwnd))
 	{
@@ -24,17 +21,26 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 		return false;
 	}
 
-	ImGui_ImplDX11_Init(pd3dDevice, pd3dDeviceContext);
+	ImGui_ImplDX11_Init(m_device, m_deviceContext);
 
 	CreateRenderTarget();
 	CreateDepthStencilState();
 	CreateDepthBuffer();
 
-	pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, depthStencilView);
+	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
 	CreateRasterizerState();
 	InitializeViewport();
 	InitializeMatrices();
+
+	m_camera = new CameraClass;
+	m_camera->SetPosition(0.0f, 0.0f, -5.0f); // TEMP
+	
+	m_model = new ModelClass;
+	m_model->Initialize(m_device); // TODO: Handle failure
+	
+	m_colorShader = new ColorShader;
+	m_colorShader->Initialize(m_device, hwnd);
 
 	return true;
 }
@@ -45,6 +51,14 @@ bool RenderSystem::Render()
 	BeginScene();
 
 	// Scene
+	m_camera->Render();
+
+	XMMATRIX viewMatrix;
+	m_camera->GetViewMatrix(viewMatrix);
+
+	m_model->Render(m_deviceContext);
+
+	m_colorShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix);
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -57,40 +71,58 @@ bool RenderSystem::Render()
 void RenderSystem::BeginScene()
 {
 	// Handle minimize or screen lock
-	if (SwapChainOccluded && pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+	if (m_isSwapChainOccluded && m_swapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
 	{
 		::Sleep(10);
 		return;
 	}
-	SwapChainOccluded = false;
+	m_isSwapChainOccluded = false;
 
 	// Handle window resize (we don't resize directly in the WM_SIZE handler)
-	screenWidth = input_handle->GetResizeWidth();
-	screenHeight = input_handle->GetResizeHeight();
-	if (screenWidth != 0 && screenHeight != 0)
+	m_screenWidth = m_inputHandle->GetResizeWidth();
+	m_screenHeight = m_inputHandle->GetResizeHeight();
+	if (m_screenWidth != 0 && m_screenHeight != 0)
 	{
 		CleanupRenderTarget();
 		CleanupDepthBuffer();
-		pSwapChain->ResizeBuffers(0, screenWidth, screenHeight, DXGI_FORMAT_UNKNOWN, 0);
+		m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
 		CreateRenderTarget();
 		CreateDepthBuffer();
 	}
 
 	const float color[3] = { 0.9, 1, 1 }; // CLEAR COLOR
-	pd3dDeviceContext->ClearRenderTargetView(mainRenderTargetView, color);
-	pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, depthStencilView);
-	pd3dDeviceContext->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	m_deviceContext->ClearRenderTargetView(m_renderTargetView, color);
+	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
+	m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 void RenderSystem::EndScene()
 {
 	// Present
-	HRESULT hr = pSwapChain->Present(0, 0); // Without vsync
-	SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+	HRESULT hr = m_swapChain->Present(0, 0); // Without vsync
+	m_isSwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
 }
 
 void RenderSystem::Shutdown()
 {
+	if (m_colorShader)
+	{
+		m_colorShader->Shutdown();
+		delete m_colorShader;
+		m_colorShader = nullptr;
+	}
+	if (m_model)
+	{
+		m_model->Shutdown();
+		delete m_model;
+		m_model = nullptr;
+	}
+	if (m_camera)
+	{
+		delete m_camera;
+		m_camera = nullptr;
+	}
+	
 	ImGui_ImplDX11_Shutdown();
 	CleanupRasterizerState();
 	CleanupDepthStencilState();
@@ -129,9 +161,9 @@ bool RenderSystem::CreateDeviceD3D(HWND hWnd)
 	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 	D3D_FEATURE_LEVEL featureLevel;
 	const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-	HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &pSwapChain, &pd3dDevice, &featureLevel, &pd3dDeviceContext);
+	HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &featureLevel, &m_deviceContext);
 	if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-		res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &pSwapChain, &pd3dDevice, &featureLevel, &pd3dDeviceContext);
+		res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &featureLevel, &m_deviceContext);
 	if (res != S_OK)
 		return false;
 
@@ -140,31 +172,31 @@ bool RenderSystem::CreateDeviceD3D(HWND hWnd)
 
 void RenderSystem::CleanupDeviceD3D()
 {
-	if (pd3dDeviceContext)
+	if (m_deviceContext)
 	{
-		pd3dDeviceContext->Release();
-		pd3dDeviceContext = nullptr;
+		m_deviceContext->Release();
+		m_deviceContext = nullptr;
 	}
-	if (pd3dDevice)
+	if (m_device)
 	{
-		pd3dDevice->Release();
-		pd3dDevice = nullptr;
+		m_device->Release();
+		m_device = nullptr;
 	}
-	if (pSwapChain)
+	if (m_swapChain)
 	{
-		pSwapChain->Release();
-		pSwapChain = nullptr;
+		m_swapChain->Release();
+		m_swapChain = nullptr;
 	}
 }
 
 bool RenderSystem::CreateRenderTarget()
 {
 	ID3D11Texture2D* pBackBuffer;
-	HRESULT result = pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+	HRESULT result = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
 	if (FAILED(result))
 		return false;
 
-	result = pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &mainRenderTargetView);
+	result = m_device->CreateRenderTargetView(pBackBuffer, nullptr, &m_renderTargetView);
 	if (FAILED(result))
 		return false;
 
@@ -176,10 +208,10 @@ bool RenderSystem::CreateRenderTarget()
 
 void RenderSystem::CleanupRenderTarget()
 {
-	if (mainRenderTargetView)
+	if (m_renderTargetView)
 	{
-		mainRenderTargetView->Release();
-		mainRenderTargetView = nullptr;
+		m_renderTargetView->Release();
+		m_renderTargetView = nullptr;
 	}
 }
 
@@ -205,7 +237,7 @@ bool RenderSystem::CreateDepthStencilState()
 	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-	HRESULT result = pd3dDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	HRESULT result = m_device->CreateDepthStencilState(&dsd, &m_depthStencilState);
 	if (FAILED(result))
 		return false;
 
@@ -214,10 +246,10 @@ bool RenderSystem::CreateDepthStencilState()
 
 void RenderSystem::CleanupDepthStencilState()
 {
-	if (depthStencilState)
+	if (m_depthStencilState)
 	{
-		depthStencilState->Release();
-		depthStencilState = nullptr;
+		m_depthStencilState->Release();
+		m_depthStencilState = nullptr;
 	}
 }
 
@@ -225,8 +257,8 @@ bool RenderSystem::CreateDepthBuffer()
 {
 	D3D11_TEXTURE2D_DESC dbd;
 	ZeroMemory(&dbd, sizeof(dbd));
-	dbd.Width = screenWidth;
-	dbd.Height = screenHeight;
+	dbd.Width = m_screenWidth;
+	dbd.Height = m_screenHeight;
 	dbd.MipLevels = 1;
 	dbd.ArraySize = 1;
 	dbd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -237,11 +269,11 @@ bool RenderSystem::CreateDepthBuffer()
 	dbd.CPUAccessFlags = 0;
 	dbd.MiscFlags = 0;
 
-	HRESULT result = pd3dDevice->CreateTexture2D(&dbd, nullptr, &depthStencilBuffer);
+	HRESULT result = m_device->CreateTexture2D(&dbd, nullptr, &m_depthStencilBuffer);
 	if (FAILED(result))
 		return false;
 
-	pd3dDeviceContext->OMSetDepthStencilState(depthStencilState, 1);
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
 
 	// Stencil view descriptioon
 	D3D11_DEPTH_STENCIL_VIEW_DESC svd;
@@ -250,7 +282,7 @@ bool RenderSystem::CreateDepthBuffer()
 	svd.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	svd.Texture2D.MipSlice = 0;
 
-	result = pd3dDevice->CreateDepthStencilView(depthStencilBuffer, &svd, &depthStencilView);
+	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &svd, &m_depthStencilView);
 	if (FAILED(result))
 		return false;
 
@@ -259,13 +291,13 @@ bool RenderSystem::CreateDepthBuffer()
 
 void RenderSystem::CleanupDepthBuffer()
 {
-	if (depthStencilView) {
-		depthStencilView->Release();
-		depthStencilView = nullptr;
+	if (m_depthStencilView) {
+		m_depthStencilView->Release();
+		m_depthStencilView = nullptr;
 	}
-	if (depthStencilBuffer) {
-		depthStencilBuffer->Release();
-		depthStencilBuffer = nullptr;
+	if (m_depthStencilBuffer) {
+		m_depthStencilBuffer->Release();
+		m_depthStencilBuffer = nullptr;
 	}
 }
 
@@ -283,57 +315,57 @@ bool RenderSystem::CreateRasterizerState()
 	rd.ScissorEnable = false;
 	rd.SlopeScaledDepthBias = 0.0f;
 
-	HRESULT result = pd3dDevice->CreateRasterizerState(&rd, &rasterState);
+	HRESULT result = m_device->CreateRasterizerState(&rd, &m_rasterState);
 	if (FAILED(result))
 		return false;
 
-	pd3dDeviceContext->RSSetState(rasterState);
+	m_deviceContext->RSSetState(m_rasterState);
 
 	return true;
 }
 
 void RenderSystem::CleanupRasterizerState()
 {
-	if (rasterState)
+	if (m_rasterState)
 	{
-		rasterState->Release();
-		rasterState = nullptr;
+		m_rasterState->Release();
+		m_rasterState = nullptr;
 	}
 }
 
 void RenderSystem::InitializeViewport()
 {
-	viewport.Width = (float)screenWidth;
-	viewport.Height = (float)screenHeight;
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	viewport.TopLeftX = 0.0f;
-	viewport.TopLeftY = 0.0f;
+	m_viewport.Width = (float)m_screenWidth;
+	m_viewport.Height = (float)m_screenHeight;
+	m_viewport.MinDepth = 0.0f;
+	m_viewport.MaxDepth = 1.0f;
+	m_viewport.TopLeftX = 0.0f;
+	m_viewport.TopLeftY = 0.0f;
 
-	pd3dDeviceContext->RSSetViewports(1, &viewport);
+	m_deviceContext->RSSetViewports(1, &m_viewport);
 }
 
 void RenderSystem::InitializeMatrices()
 {
 	float fieldOfView, screenAspect, screenNear, screenDepth;
 	fieldOfView = 3.14159f / 4.0f;
-	screenAspect = (float)screenWidth / (float)screenHeight;
+	screenAspect = (float)m_screenWidth / (float)m_screenHeight;
 	screenNear = 0.3f;
 	screenDepth = 1000.0f;
 
-	projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
 
-	worldMatrix = XMMatrixIdentity();
+	m_worldMatrix = XMMatrixIdentity();
 
-	orthoMatrix = XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenDepth);
+	m_orthoMatrix = XMMatrixOrthographicLH((float)m_screenWidth, (float)m_screenHeight, screenNear, screenDepth);
 }
 
 void RenderSystem::SetBackBufferRenderTarget()
 {
-	pd3dDeviceContext->OMSetRenderTargets(1, &mainRenderTargetView, depthStencilView);
+	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 }
 
 void RenderSystem::ResetViewport()
 {
-	pd3dDeviceContext->RSSetViewports(1, &viewport);
+	m_deviceContext->RSSetViewports(1, &m_viewport);
 }

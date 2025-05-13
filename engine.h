@@ -21,7 +21,7 @@ private:
 	bool Frame();
 
 private:
-	InputSystem* input_system = nullptr;
-	GuiSystem* gui_system = nullptr;
-	RenderSystem* render_system = nullptr;
+	InputSystem* m_inputSystem = nullptr;
+	GuiSystem* m_guiSystem = nullptr;
+	RenderSystem* m_renderSystem = nullptr;
 };

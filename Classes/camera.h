@@ -20,7 +20,7 @@ public:
 	void GetViewMatrix(XMMATRIX&);
 
 private:
-	float positionX = 0.0f, positionY = 0.0f, positionZ = 0.0f;
-	float rotationX = 0.0f, rotationY = 0.0f, rotationZ = 0.0f;
-	XMMATRIX viewMatrix;
+	float m_positionX = 0.0f, m_positionY = 0.0f, m_positionZ = 0.0f;
+	float m_rotationX = 0.0f, m_rotationY = 0.0f, m_rotationZ = 0.0f;
+	XMMATRIX m_viewMatrix = {};
 };

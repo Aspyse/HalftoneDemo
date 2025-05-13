@@ -9,28 +9,28 @@ void InputSystem::Initialize() { }
 
 bool InputSystem::IsKeyDown(UINT input)
 {
-	return keys[input];
+	return m_keys[input];
 }
 
 UINT InputSystem::GetResizeWidth()
 {
-	return resizeWidth;
+	return m_resizeWidth;
 }
 
 UINT InputSystem::GetResizeHeight()
 {
-	return resizeHeight;
+	return m_resizeHeight;
 }
 
 void InputSystem::KeyDown(UINT input)
 {
-	keys[input] = true;
+	m_keys[input] = true;
 	return;
 }
 
 void InputSystem::KeyUp(UINT input)
 {
-	keys[input] = false;
+	m_keys[input] = false;
 	return;
 }
 
@@ -41,8 +41,8 @@ LRESULT CALLBACK InputSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 	case WM_SIZE:
 		if (wparam == SIZE_MINIMIZED)
 			return 0;
-		resizeWidth = (UINT)LOWORD(lparam);
-		resizeHeight = (UINT)HIWORD(lparam);
+		m_resizeWidth = (UINT)LOWORD(lparam);
+		m_resizeHeight = (UINT)HIWORD(lparam);
 		return 0;
 	case WM_KEYDOWN:
 		KeyDown((UINT)wparam);

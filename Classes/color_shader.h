@@ -34,8 +34,8 @@ private:
 	void RenderShader(ID3D11DeviceContext*, int);
 
 private:
-	ID3D11VertexShader* vertexShader = nullptr;
-	ID3D11PixelShader* pixelShader = nullptr;
-	ID3D11InputLayout* layout = nullptr;
-	ID3D11Buffer* matrixBuffer = nullptr;
+	ID3D11VertexShader* m_vertexShader = nullptr;
+	ID3D11PixelShader* m_pixelShader = nullptr;
+	ID3D11InputLayout* m_layout = nullptr;
+	ID3D11Buffer* m_matrixBuffer = nullptr;
 };

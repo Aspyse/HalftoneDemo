@@ -27,12 +27,6 @@
     <ClCompile Include="engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gui_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="input_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
       <Filter>Source Files\ImGui</Filter>
     </ClCompile>
@@ -54,21 +48,27 @@
     <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
       <Filter>Source Files\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="render_system.cpp">
+    <ClCompile Include="Subsystems\gui_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Subsystems\input_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Subsystems\render_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\color_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="gui_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="input_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="render_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="imgui\imconfig.h">
@@ -95,11 +95,40 @@
     <ClInclude Include="imgui\backends\imgui_impl_win32.h">
       <Filter>Source Files\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="color_shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\gui_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\input_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\render_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\camera.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\color_shader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\model.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="color.vs">
+    <None Include="Shaders\color.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="color.ps" />
+    <None Include="Shaders\color.vs">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -11,39 +11,39 @@ bool Engine::Initialize()
 {
 	bool result;
 
-	input_system = new InputSystem;
-	input_system->Initialize();
+	m_inputSystem = new InputSystem;
+	m_inputSystem->Initialize();
 
-	gui_system = new GuiSystem;
-	gui_system->Initialize(input_system);
+	m_guiSystem = new GuiSystem;
+	m_guiSystem->Initialize(m_inputSystem);
 
-	HWND hwnd = gui_system->GetHWND();
-	WNDCLASSEXW wc = gui_system->GetWC();
+	HWND hwnd = m_guiSystem->GetHWND();
+	WNDCLASSEXW wc = m_guiSystem->GetWC();
 
-	render_system = new RenderSystem;
-	render_system->Initialize(hwnd, wc, input_system);
+	m_renderSystem = new RenderSystem;
+	m_renderSystem->Initialize(hwnd, wc, m_inputSystem);
 
 	return true; // TEMP
 }
 
 void Engine::Shutdown()
 {
-	if (render_system)
+	if (m_renderSystem)
 	{
-		render_system->Shutdown();
-		delete render_system;
-		render_system = nullptr;
+		m_renderSystem->Shutdown();
+		delete m_renderSystem;
+		m_renderSystem = nullptr;
 	}
-	if (gui_system)
+	if (m_guiSystem)
 	{
-		gui_system->Shutdown();
-		delete gui_system;
-		gui_system = nullptr;
+		m_guiSystem->Shutdown();
+		delete m_guiSystem;
+		m_guiSystem = nullptr;
 	}
-	if (input_system)
+	if (m_inputSystem)
 	{
-		delete input_system;
-		input_system = nullptr;
+		delete m_inputSystem;
+		m_inputSystem = nullptr;
 	}
 }
 
@@ -77,14 +77,14 @@ bool Engine::Frame()
 {
 	bool result;
 
-	if (input_system->IsKeyDown(VK_ESCAPE))
+	if (m_inputSystem->IsKeyDown(VK_ESCAPE))
 		return false;
 
-	result = gui_system->Frame();
+	result = m_guiSystem->Frame();
 	if (!result)
 		return false;
 
-	result = render_system->Render();
+	result = m_renderSystem->Render();
 	if (!result)
 		return false;
 

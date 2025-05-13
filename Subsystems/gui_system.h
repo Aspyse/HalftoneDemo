@@ -21,11 +21,11 @@ public:
 	HWND GetHWND();
 
 private:
-	WNDCLASSEXW wc;
-	HWND hwnd = nullptr;
+	WNDCLASSEXW m_wc;
+	HWND m_hwnd = nullptr;
 
-	ImGuiIO* io = nullptr;
-	RenderSystem* render_system = nullptr;
+	ImGuiIO* m_io = nullptr;
+	RenderSystem* m_renderSystem = nullptr;
 };
 
 static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);

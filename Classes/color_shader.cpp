@@ -9,7 +9,7 @@ bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
 	wchar_t vsFilename[128];
 	wchar_t psFilename[128];
 
-	int error = wcscpy_s(vsFilename, 128, L"/Shaders/color.vs");
+	int error = wcscpy_s(vsFilename, 128, L"Shaders/color.vs");
 	if (error != 0)
 		return false;
 	error = wcscpy_s(psFilename, 128, L"Shaders/color.ps");
@@ -62,12 +62,12 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	}
 
 	// Create vertex shader from buffer
-	result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), nullptr, &vertexShader);
+	result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), nullptr, &m_vertexShader);
 	if (FAILED(result))
 		return false;
 
 	// Create pixel shader from buffer
-	result = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), pixelShaderBuffer->GetBufferSize(), nullptr, &pixelShader);
+	result = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), pixelShaderBuffer->GetBufferSize(), nullptr, &m_pixelShader);
 	if (FAILED(result))
 		return false;
 
@@ -91,7 +91,7 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 
 	UINT numElements = sizeof(pl) / sizeof(pl[0]);
 
-	result = device->CreateInputLayout(pl, numElements, vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), &layout);
+	result = device->CreateInputLayout(pl, numElements, vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), &m_layout);
 	if (FAILED(result))
 		return false;
 
@@ -112,7 +112,7 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	mbd.MiscFlags = 0;
 	mbd.StructureByteStride = 0;
 
-	result = device->CreateBuffer(&mbd, nullptr, &matrixBuffer);
+	result = device->CreateBuffer(&mbd, nullptr, &m_matrixBuffer);
 	if (FAILED(result))
 		return false;
 
@@ -121,25 +121,25 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 
 void ColorShader::Shutdown() // Consider splitting up
 {
-	if (matrixBuffer)
+	if (m_matrixBuffer)
 	{
-		matrixBuffer->Release();
-		matrixBuffer = nullptr;
+		m_matrixBuffer->Release();
+		m_matrixBuffer = nullptr;
 	}
-	if (layout)
+	if (m_layout)
 	{
-		layout->Release();
-		layout = nullptr;
+		m_layout->Release();
+		m_layout = nullptr;
 	}
-	if (pixelShader)
+	if (m_pixelShader)
 	{
-		pixelShader->Release();
-		pixelShader = nullptr;
+		m_pixelShader->Release();
+		m_pixelShader = nullptr;
 	}
-	if (vertexShader)
+	if (m_vertexShader)
 	{
-		vertexShader->Release();
-		vertexShader = nullptr;
+		m_vertexShader->Release();
+		m_vertexShader = nullptr;
 	}
 }
 
@@ -172,7 +172,7 @@ bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATR
 	projectionMatrix = XMMatrixTranspose(projectionMatrix);
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT result = deviceContext->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	HRESULT result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))
 		return false;
 
@@ -182,21 +182,21 @@ bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATR
 	dataPtr->view = viewMatrix;
 	dataPtr->projection = projectionMatrix;
 
-	deviceContext->Unmap(matrixBuffer, 0);
+	deviceContext->Unmap(m_matrixBuffer, 0);
 
 	UINT bufferNumber = 0;
 
-	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
+	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
 
 	return true;
 }
 
 void ColorShader::RenderShader(ID3D11DeviceContext* deviceContext, int indexCount)
 {
-	deviceContext->IASetInputLayout(layout);
+	deviceContext->IASetInputLayout(m_layout);
 
-	deviceContext->VSSetShader(vertexShader, nullptr, 0);
-	deviceContext->PSSetShader(pixelShader, nullptr, 0);
+	deviceContext->VSSetShader(m_vertexShader, nullptr, 0);
+	deviceContext->PSSetShader(m_pixelShader, nullptr, 0);
 
 	deviceContext->DrawIndexed(indexCount, 0, 0);
 }

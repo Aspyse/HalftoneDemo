@@ -22,6 +22,6 @@ private:
     void KeyUp(UINT);
 
 private:
-    bool keys[256] = { false };
-    UINT resizeWidth = 0, resizeHeight = 0;
+    bool m_keys[256] = { false };
+    UINT m_resizeWidth = 0, m_resizeHeight = 0;
 };
