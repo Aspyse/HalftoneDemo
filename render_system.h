@@ -11,11 +11,11 @@ public:
 	RenderSystem(const RenderSystem&);
 	~RenderSystem();
 
-	bool Initialize(int, int, bool, HWND, bool, float, float);
+	bool Initialize(HWND, WNDCLASSEXW);
 	void Shutdown();
 	bool Frame();
 
-	void BeginScene(float, float, float, float);
+	void BeginScene();
 	void EndScene();
 
 private:
@@ -25,5 +25,11 @@ private:
 	void CleanupRenderTarget();
 
 private:
+	ID3D11Device* pd3dDevice = nullptr;
+	ID3D11DeviceContext* pd3dDeviceContext = nullptr;
+	IDXGISwapChain* pSwapChain = nullptr;
+	ID3D11RenderTargetView* mainRenderTargetView = nullptr;
+	bool SwapChainOccluded = false;
 
+	UINT resizeWidth = 0, resizeHeight = 0;
 };

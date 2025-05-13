@@ -12,6 +12,8 @@ public:
 
     void Initialize();
     bool IsKeyDown(UINT);
+    UINT GetResizeWidth();
+    UINT GetResizeHeight();
 
     LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -21,4 +23,5 @@ private:
 
 private:
     bool keys[256] = { false };
+    UINT resizeWidth = 0, resizeHeight = 0;
 };
