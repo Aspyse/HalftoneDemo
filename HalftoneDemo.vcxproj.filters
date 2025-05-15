@@ -131,6 +131,9 @@
     <ClInclude Include="external\miniply.h">
       <Filter>Source Files\External</Filter>
     </ClInclude>
+    <ClInclude Include="render_texture.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\flat.ps">
