@@ -10,7 +10,7 @@ private:
 	struct VertexType
 	{
 		XMFLOAT3 position;
-		XMFLOAT4 color;
+		XMFLOAT3 normal;
 	};
 
 public:
@@ -25,6 +25,10 @@ public:
 	int GetIndexCount();
 
 private:
+	bool LoadPLY(VertexType*&, ULONG*&, const char*);
+	bool CalculateNormals(VertexType*&, ULONG*);
+
+private:
 	ID3D11Buffer *m_vertexBuffer = nullptr, *m_indexBuffer = nullptr;
-	int m_vertexCount = 0, m_indexCount = 0;
+	UINT m_vertexCount = 0, m_indexCount = 0;
 };

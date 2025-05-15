@@ -28,6 +28,9 @@ private:
 	bool CreateRenderTarget();
 	void CleanupRenderTarget();
 
+	bool CreateTextureRenderTarget(UINT, UINT);
+	void BeginTextureScene(UINT, UINT);
+
 	bool CreateDepthStencilState();
 	void CleanupDepthStencilState();
 	bool CreateRasterizerState();
@@ -36,7 +39,7 @@ private:
 	bool CreateDepthBuffer();
 	void CleanupDepthBuffer();
 
-	void InitializeViewport();
+	void InitializeViewport(float, float);
 	void InitializeMatrices();
 
 	void SetBackBufferRenderTarget();
@@ -54,6 +57,10 @@ private:
 	ID3D11Device* m_device = nullptr;
 	ID3D11DeviceContext* m_deviceContext = nullptr;
 	ID3D11RenderTargetView* m_renderTargetView = nullptr;
+	
+	ID3D11Texture2D* m_altRenderTargetTexture = nullptr;
+	ID3D11RenderTargetView* m_altRenderTargetView = nullptr;
+	ID3D11ShaderResourceView* m_altShaderResourceView = nullptr;
 
 	ID3D11Texture2D* m_depthStencilBuffer = nullptr;
 	ID3D11DepthStencilState* m_depthStencilState = nullptr;
@@ -67,4 +74,5 @@ private:
 	D3D11_VIEWPORT m_viewport = {};
 
 	UINT m_screenWidth = 0, m_screenHeight = 0;
+	UINT m_texWidth = 0, m_texHeight = 0;
 };

@@ -9,10 +9,10 @@ bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
 	wchar_t vsFilename[128];
 	wchar_t psFilename[128];
 
-	int error = wcscpy_s(vsFilename, 128, L"Shaders/color.vs");
+	int error = wcscpy_s(vsFilename, 128, L"Shaders/base.vs");
 	if (error != 0)
 		return false;
-	error = wcscpy_s(psFilename, 128, L"Shaders/color.ps");
+	error = wcscpy_s(psFilename, 128, L"Shaders/flat.ps");
 	if (error != 0)
 		return false;
 
@@ -22,9 +22,9 @@ bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
 	return true;
 }
 
-bool ColorShader::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix) // Consider splitting
+bool ColorShader::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold) // Consider splitting
 {
-	if (!SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix))
+	if (!SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, ambientColor, lightColor, lightDirection, celThreshold))
 		return false;
 
 	RenderShader(deviceContext, indexCount);
@@ -38,7 +38,7 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	ID3D10Blob* pixelShaderBuffer;
 
 	// Compile vertex shader code
-	HRESULT result = D3DCompileFromFile(vsFilename, nullptr, nullptr, "ColorVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &vertexShaderBuffer, &errorMessage);
+	HRESULT result = D3DCompileFromFile(vsFilename, nullptr, nullptr, "BaseVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &vertexShaderBuffer, &errorMessage);
 	if (FAILED(result))
 	{
 		if (errorMessage)
@@ -50,7 +50,7 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	}
 	
 	// Compile pixel shader code
-	result = D3DCompileFromFile(psFilename, nullptr, nullptr, "ColorPixelShader", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &pixelShaderBuffer, &errorMessage);
+	result = D3DCompileFromFile(psFilename, nullptr, nullptr, "FlatPixelShader", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &pixelShaderBuffer, &errorMessage);
 	if (FAILED(result))
 	{
 		if (errorMessage)
@@ -81,9 +81,9 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	pl[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	pl[0].InstanceDataStepRate = 0;
 
-	pl[1].SemanticName = "COLOR";
+	pl[1].SemanticName = "NORMAL";
 	pl[1].SemanticIndex = 0;
-	pl[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	pl[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	pl[1].InputSlot = 0;
 	pl[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 	pl[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -116,11 +116,29 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	if (FAILED(result))
 		return false;
 
+	D3D11_BUFFER_DESC lbd;
+	ZeroMemory(&lbd, sizeof(lbd));
+	lbd.Usage = D3D11_USAGE_DYNAMIC;
+	lbd.ByteWidth = sizeof(LightBufferType);
+	lbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	lbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	lbd.MiscFlags = 0;
+	lbd.StructureByteStride = 0;
+
+	result = device->CreateBuffer(&lbd, nullptr, &m_lightBuffer);
+	if (FAILED(result))
+		return false;
+
 	return true;
 }
 
 void ColorShader::Shutdown() // Consider splitting up
 {
+	if (m_lightBuffer)
+	{
+		m_lightBuffer->Release();
+		m_lightBuffer = nullptr;
+	}
 	if (m_matrixBuffer)
 	{
 		m_matrixBuffer->Release();
@@ -165,7 +183,7 @@ void ColorShader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, 
 	MessageBox(hwnd, L"Error compiling shader.  Check shader-error.txt for message.", shaderFilename, MB_OK);
 }
 
-bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix)
+bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold)
 {
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 	viewMatrix = XMMatrixTranspose(viewMatrix);
@@ -187,6 +205,22 @@ bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATR
 	UINT bufferNumber = 0;
 
 	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
+
+	result = deviceContext->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (FAILED(result))
+		return false;
+
+	LightBufferType* dataPtr2 = (LightBufferType*)mappedResource.pData;
+	dataPtr2->ambientColor = ambientColor;
+	dataPtr2->lightColor = lightColor;
+	dataPtr2->lightDirection = lightDirection;
+	dataPtr2->celThreshold = celThreshold;
+
+	deviceContext->Unmap(m_lightBuffer, 0);
+
+	bufferNumber = 0;
+
+	deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_lightBuffer);
 
 	return true;
 }

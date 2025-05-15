@@ -23,6 +23,7 @@
     <ClCompile Include="Classes\color_shader.cpp" />
     <ClCompile Include="Classes\model.cpp" />
     <ClCompile Include="engine.cpp" />
+    <ClCompile Include="external\miniply.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="Classes\model.h" />
     <ClInclude Include="color_shader.h" />
     <ClInclude Include="engine.h" />
+    <ClInclude Include="external\miniply.h" />
     <ClInclude Include="imgui\backends\imgui_impl_dx11.h" />
     <ClInclude Include="imgui\backends\imgui_impl_win32.h" />
     <ClInclude Include="imgui\imconfig.h" />
@@ -56,8 +58,9 @@
     <ClInclude Include="Subsystems\render_system.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\color.ps" />
-    <None Include="Shaders\color.vs" />
+    <None Include="halftone.ps" />
+    <None Include="Shaders\flat.ps" />
+    <None Include="Shaders\base.vs" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -145,7 +148,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>imgui/;imgui/backends;Subsystems/;Classes/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>imgui/;imgui/backends;Subsystems/;Classes/;external/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

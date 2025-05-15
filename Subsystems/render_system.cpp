@@ -30,11 +30,17 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
 	CreateRasterizerState();
-	InitializeViewport();
+	//InitializeViewport();
 	InitializeMatrices();
 
+	m_texWidth = m_screenWidth / 8;
+	m_texHeight = m_screenHeight / 8;
+
+	CreateTextureRenderTarget(m_texWidth, m_texHeight);
+
 	m_camera = new CameraClass;
-	m_camera->SetPosition(0.0f, 0.0f, -5.0f); // TEMP
+	m_camera->SetPosition(0.0f, 0.1f, -1.0f); // TEMP
+	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
 	
 	m_model = new ModelClass;
 	m_model->Initialize(m_device); // TODO: Handle failure
@@ -47,8 +53,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 
 bool RenderSystem::Render()
 {
-	// Clear the buffers to begin the scene
-	BeginScene();
+	BeginTextureScene(m_texWidth, m_texHeight);
 
 	// Scene
 	m_camera->Render();
@@ -58,7 +63,18 @@ bool RenderSystem::Render()
 
 	m_model->Render(m_deviceContext);
 
-	m_colorShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix);
+	XMFLOAT4 ambientColor = XMFLOAT4(0.27f, 0.3f, 0.3f, 1.0f);
+	XMFLOAT4 lightColor = XMFLOAT4(0.9f, 0.9f, 0.9f, 1.0f);
+	XMFLOAT3 lightDirection = XMFLOAT3(-0.3f, 1.0f, -0.3f);
+	float celThreshold = 0.0f;
+	m_colorShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix, ambientColor, lightColor, lightDirection, celThreshold);
+
+	// Clear the buffers to begin the scene
+	BeginScene();
+
+	m_deviceContext->PSSetShaderResources(0, 1, &m_altShaderResourceView);
+
+
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -101,6 +117,17 @@ void RenderSystem::EndScene()
 	// Present
 	HRESULT hr = m_swapChain->Present(0, 0); // Without vsync
 	m_isSwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+}
+
+void RenderSystem::BeginTextureScene(UINT width, UINT height)
+{
+	const float color[3] = { 0.9, 1, 1 }; // CLEAR COLOR
+	m_deviceContext->ClearRenderTargetView(m_altRenderTargetView, color);
+	m_deviceContext-> OMSetRenderTargets(1, &m_altRenderTargetView, m_depthStencilView);
+
+	InitializeViewport(width, height);
+
+	m_deviceContext->RSSetViewports(1, &m_viewport);
 }
 
 void RenderSystem::Shutdown()
@@ -202,6 +229,33 @@ bool RenderSystem::CreateRenderTarget()
 
 	pBackBuffer->Release();
 	pBackBuffer = nullptr;
+
+	return true;
+}
+
+bool RenderSystem::CreateTextureRenderTarget(UINT width, UINT height)
+{
+	D3D11_TEXTURE2D_DESC td;
+	ZeroMemory(&td, sizeof(td));
+	td.Width = width;
+	td.Height = height;
+	td.MipLevels = 1;
+	td.ArraySize = 1;
+	td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	td.SampleDesc.Count = 1;
+	td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	td.Usage = D3D11_USAGE_DEFAULT;
+
+	HRESULT result = m_device->CreateTexture2D(&td, nullptr, &m_altRenderTargetTexture);
+	if (FAILED(result))
+		return false;
+
+	result = m_device->CreateRenderTargetView(m_altRenderTargetTexture, nullptr, &m_altRenderTargetView);
+	if (FAILED(result))
+		return false;
+	result = m_device->CreateShaderResourceView(m_altRenderTargetTexture, nullptr, &m_altShaderResourceView);
+	if (FAILED(result))
+		return false;
 
 	return true;
 }
@@ -333,10 +387,10 @@ void RenderSystem::CleanupRasterizerState()
 	}
 }
 
-void RenderSystem::InitializeViewport()
+void RenderSystem::InitializeViewport(float width, float height)
 {
-	m_viewport.Width = (float)m_screenWidth;
-	m_viewport.Height = (float)m_screenHeight;
+	m_viewport.Width = static_cast<FLOAT>(width);
+	m_viewport.Height = static_cast<FLOAT>(height);
 	m_viewport.MinDepth = 0.0f;
 	m_viewport.MaxDepth = 1.0f;
 	m_viewport.TopLeftX = 0.0f;
@@ -348,7 +402,7 @@ void RenderSystem::InitializeViewport()
 void RenderSystem::InitializeMatrices()
 {
 	float fieldOfView, screenAspect, screenNear, screenDepth;
-	fieldOfView = 3.14159f / 4.0f;
+	fieldOfView = 0.5f*(3.14159f / 4.0f);
 	screenAspect = (float)m_screenWidth / (float)m_screenHeight;
 	screenNear = 0.3f;
 	screenDepth = 1000.0f;
