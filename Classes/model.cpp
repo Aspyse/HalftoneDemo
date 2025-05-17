@@ -99,12 +99,12 @@ bool ModelClass::CalculateNormals(VertexType*& outVertices, ULONG* indices)
 	return true;
 }
 
-bool ModelClass::Initialize(ID3D11Device* device)
+bool ModelClass::Initialize(ID3D11Device* device, const char* filename)
 {
 	VertexType* vertices = nullptr;
 	ULONG* indices = nullptr;
 	
-	LoadPLY(vertices, indices, "Models/dragon_vrip.ply"); // TEMP
+	LoadPLY(vertices, indices, filename);
 
 	CalculateNormals(vertices, indices);
 

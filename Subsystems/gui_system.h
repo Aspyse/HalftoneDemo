@@ -15,7 +15,7 @@ public:
 
 	bool Initialize(InputSystem*);
 	void Shutdown();
-	bool Frame();
+	bool Frame(RenderSystem*);
 
 	WNDCLASSEXW GetWC();
 	HWND GetHWND();

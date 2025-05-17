@@ -63,14 +63,17 @@
     <ClCompile Include="Classes\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Classes\color_shader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Classes\model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="external\miniply.cpp">
       <Filter>Source Files\External</Filter>
+    </ClCompile>
+    <ClCompile Include="render_texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\base_shader.cpp">
+      <Filter>Source Files\Shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -101,15 +104,6 @@
     <ClInclude Include="imgui\backends\imgui_impl_win32.h">
       <Filter>Source Files\External\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="color_shader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Subsystems\gui_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -122,9 +116,6 @@
     <ClInclude Include="Classes\camera.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Classes\color_shader.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Classes\model.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -134,15 +125,21 @@
     <ClInclude Include="render_texture.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Classes\base_shader.h">
+      <Filter>Source Files\Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\flat.ps">
+    <None Include="Shaders\light.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="Shaders\base.vs">
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="halftone.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\flat.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>

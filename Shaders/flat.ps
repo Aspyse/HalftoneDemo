@@ -22,10 +22,8 @@ float4 FlatPixelShader(PixelInputType input) : SV_TARGET
 
 	float4 color = ambientColor;
 
-	/*if (lightIntensity > celThreshold)
-		color += lightColor;*/
-
-	color += lightColor*lightIntensity;
+	if (lightIntensity > celThreshold)
+		color += lightColor;
 
 	color = saturate(color);
 

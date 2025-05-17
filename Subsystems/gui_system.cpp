@@ -8,7 +8,7 @@
 GuiSystem::GuiSystem() {
 	ZeroMemory(&m_wc, sizeof(m_wc));
 	m_wc.cbSize = sizeof(WNDCLASSEXW);
-};
+}
 
 GuiSystem::GuiSystem(const GuiSystem& other)
 {
@@ -56,19 +56,31 @@ void GuiSystem::Shutdown()
 	::UnregisterClassW(m_wc.lpszClassName, m_wc.hInstance);
 }
 
-bool GuiSystem::Frame()
+bool GuiSystem::Frame(RenderSystem* renderSystem)
 {
 	// Start the ImGui frame
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
+	static char filename[256] = "";
+
 	// Show window
 	{
 		ImGui::Begin("Test Window");
-		ImGui::Text("Hello, world!");
-
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
+
+		ImGui::DragFloat3("Light Direction", renderSystem->LightDirection(), 0.004f);
+		ImGui::ColorEdit3("Clear Color", renderSystem->ClearColor());
+		ImGui::DragFloat("Ambient Strength", &renderSystem->AmbientStrength(), 0.002f, 0, 1);
+		ImGui::DragFloat("Cel Threshold", &renderSystem->CelThreshold(), 0.002f, 0, 1);
+
+		ImGui::Separator();
+
+		
+		if (ImGui::InputText("Filename", filename, IM_ARRAYSIZE(filename), ImGuiInputTextFlags_EnterReturnsTrue) || ImGui::Button("Load Model"))
+			renderSystem->ResetModel(filename);
+
 		ImGui::End();
 	}
 
@@ -100,20 +112,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	if (inputHandle && ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
 		return true;
 
-	switch (msg)
-	{
-	case WM_SYSCOMMAND:
-		if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
-			return 0;
-		break;
-	case WM_DESTROY:
-		::PostQuitMessage(0);
-		return 0;
-	default:
-		if (inputHandle)
-			return inputHandle->MessageHandler(hWnd, msg, wParam, lParam);
-		break;
-	}
-
+	if (inputHandle)
+		return inputHandle->MessageHandler(hWnd, msg, wParam, lParam);
+	
 	return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }

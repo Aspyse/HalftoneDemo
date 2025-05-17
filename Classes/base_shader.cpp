@@ -1,10 +1,10 @@
-#include "color_shader.h"
+#include "base_shader.h"
 
-ColorShader::ColorShader() {}
-ColorShader::ColorShader(const ColorShader&) {}
-ColorShader::~ColorShader() {}
+BaseShader::BaseShader() {}
+BaseShader::BaseShader(const BaseShader&) {}
+BaseShader::~BaseShader() {}
 
-bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
+bool BaseShader::Initialize(ID3D11Device* device, HWND hwnd, const wchar_t* pixelFilename)
 {
 	wchar_t vsFilename[128];
 	wchar_t psFilename[128];
@@ -12,7 +12,7 @@ bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
 	int error = wcscpy_s(vsFilename, 128, L"Shaders/base.vs");
 	if (error != 0)
 		return false;
-	error = wcscpy_s(psFilename, 128, L"Shaders/flat.ps");
+	error = wcscpy_s(psFilename, 128, pixelFilename);
 	if (error != 0)
 		return false;
 
@@ -22,7 +22,7 @@ bool ColorShader::Initialize(ID3D11Device* device, HWND hwnd)
 	return true;
 }
 
-bool ColorShader::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold) // Consider splitting
+bool BaseShader::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold) // Consider splitting
 {
 	if (!SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, ambientColor, lightColor, lightDirection, celThreshold))
 		return false;
@@ -31,7 +31,7 @@ bool ColorShader::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMM
 	return true;
 }
 
-bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilename, WCHAR* psFilename)
+bool BaseShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilename, WCHAR* psFilename)
 {
 	ID3D10Blob* errorMessage;
 	ID3D10Blob* vertexShaderBuffer;
@@ -132,7 +132,7 @@ bool ColorShader::CompileShader(ID3D11Device* device, HWND hwnd, WCHAR* vsFilena
 	return true;
 }
 
-void ColorShader::Shutdown() // Consider splitting up
+void BaseShader::Shutdown() // Consider splitting up
 {
 	if (m_lightBuffer)
 	{
@@ -161,7 +161,7 @@ void ColorShader::Shutdown() // Consider splitting up
 	}
 }
 
-void ColorShader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, WCHAR* shaderFilename)
+void BaseShader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, WCHAR* shaderFilename)
 {
 	char* compileErrors;
 	unsigned long long bufferSize, i;
@@ -183,7 +183,7 @@ void ColorShader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, 
 	MessageBox(hwnd, L"Error compiling shader.  Check shader-error.txt for message.", shaderFilename, MB_OK);
 }
 
-bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold)
+bool BaseShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT4 ambientColor, XMFLOAT4 lightColor, XMFLOAT3 lightDirection, float celThreshold)
 {
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 	viewMatrix = XMMatrixTranspose(viewMatrix);
@@ -225,7 +225,7 @@ bool ColorShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATR
 	return true;
 }
 
-void ColorShader::RenderShader(ID3D11DeviceContext* deviceContext, int indexCount)
+void BaseShader::RenderShader(ID3D11DeviceContext* deviceContext, int indexCount)
 {
 	deviceContext->IASetInputLayout(m_layout);
 

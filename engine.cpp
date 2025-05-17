@@ -21,7 +21,7 @@ bool Engine::Initialize()
 	WNDCLASSEXW wc = m_guiSystem->GetWC();
 
 	m_renderSystem = new RenderSystem;
-	m_renderSystem->Initialize(hwnd, wc, m_inputSystem);
+	m_renderSystem->Initialize(hwnd, wc);
 
 	return true; // TEMP
 }
@@ -80,11 +80,11 @@ bool Engine::Frame()
 	if (m_inputSystem->IsKeyDown(VK_ESCAPE))
 		return false;
 
-	result = m_guiSystem->Frame();
+	result = m_guiSystem->Frame(m_renderSystem);
 	if (!result)
 		return false;
 
-	result = m_renderSystem->Render();
+	result = m_renderSystem->Render(m_inputSystem);
 	if (!result)
 		return false;
 

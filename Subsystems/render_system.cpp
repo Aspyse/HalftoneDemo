@@ -5,14 +5,14 @@ RenderSystem::RenderSystem() {};
 RenderSystem::RenderSystem(const RenderSystem&) {};
 RenderSystem::~RenderSystem() {};
 
-bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandle)
+bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 {
 	RECT rect;
 	GetClientRect(hwnd, &rect);
 
 	m_screenWidth = rect.right - rect.left;
 	m_screenHeight = rect.bottom - rect.top;
-	m_inputHandle = inputHandle;
+
 	// Initialize Direct3D
 	if (!CreateDeviceD3D(hwnd))
 	{
@@ -29,52 +29,98 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc, InputSystem* inputHandl
 
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
-	CreateRasterizerState();
-	//InitializeViewport();
+	CreateRasterState();
+	InitializeViewport(m_screenWidth, m_screenHeight);
 	InitializeMatrices();
 
-	m_texWidth = m_screenWidth / 8;
-	m_texHeight = m_screenHeight / 8;
-
-	CreateTextureRenderTarget(m_texWidth, m_texHeight);
-
 	m_camera = new CameraClass;
-	m_camera->SetPosition(0.0f, 0.1f, -1.0f); // TEMP
+	m_camera->SetPosition(0.0f, 0.1f, -1.0f); // TEMP VALUES
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
+	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);
 	
 	m_model = new ModelClass;
-	m_model->Initialize(m_device); // TODO: Handle failure
+	m_model->Initialize(m_device, "Models/dragon_vrip.ply"); // TODO: Handle failure
 	
-	m_colorShader = new ColorShader;
-	m_colorShader->Initialize(m_device, hwnd);
+	m_baseShader = new BaseShader;
+	m_baseShader->Initialize(m_device, hwnd, L"Shaders/light.ps");
 
 	return true;
 }
 
-bool RenderSystem::Render()
+void RenderSystem::Shutdown()
 {
-	BeginTextureScene(m_texWidth, m_texHeight);
+	if (m_baseShader)
+	{
+		m_baseShader->Shutdown();
+		delete m_baseShader;
+		m_baseShader = nullptr;
+	}
+	if (m_model)
+	{
+		m_model->Shutdown();
+		delete m_model;
+		m_model = nullptr;
+	}
+	if (m_camera)
+	{
+		delete m_camera;
+		m_camera = nullptr;
+	}
 
-	// Scene
-	m_camera->Render();
+	ImGui_ImplDX11_Shutdown();
+	
+	if (m_rasterState)
+	{
+		m_rasterState->Release();
+		m_rasterState = nullptr;
+	}
+	if (m_depthStencilState)
+	{
+		m_depthStencilState->Release();
+		m_depthStencilState = nullptr;
+	}
+
+	CleanupDepthBuffer();
+	CleanupRenderTarget();
+	CleanupDeviceD3D();
+}
+
+
+bool RenderSystem::Render(InputSystem* inputHandle)
+{
+	// Input
+	m_screenWidth = inputHandle->GetResizeWidth();
+	m_screenHeight = inputHandle->GetResizeHeight();
+	
+	// Resize
+	if (m_screenWidth != 0 && m_screenHeight != 0)
+	{
+		CleanupRenderTarget();
+		CleanupDepthBuffer();
+		m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
+		CreateRenderTarget();
+		CreateDepthBuffer();
+
+		InitializeViewport(m_screenWidth, m_screenHeight);
+		InitializeMatrices();
+	}
+	
+	// Clear the buffers to begin the scene
+	BeginScene();
+
+	m_camera->Frame(inputHandle);
 
 	XMMATRIX viewMatrix;
 	m_camera->GetViewMatrix(viewMatrix);
 
 	m_model->Render(m_deviceContext);
 
-	XMFLOAT4 ambientColor = XMFLOAT4(0.27f, 0.3f, 0.3f, 1.0f);
+	XMFLOAT4 ambientColor = XMFLOAT4(m_clearColor[0]* m_ambientStrength, m_clearColor[1]* m_ambientStrength, m_clearColor[2]* m_ambientStrength, 1.0f);
+
 	XMFLOAT4 lightColor = XMFLOAT4(0.9f, 0.9f, 0.9f, 1.0f);
-	XMFLOAT3 lightDirection = XMFLOAT3(-0.3f, 1.0f, -0.3f);
+	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
 	float celThreshold = 0.0f;
-	m_colorShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix, ambientColor, lightColor, lightDirection, celThreshold);
-
-	// Clear the buffers to begin the scene
-	BeginScene();
-
-	m_deviceContext->PSSetShaderResources(0, 1, &m_altShaderResourceView);
-
-
+	m_baseShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix, ambientColor, lightColor, lightDirection, m_celThreshold);
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -94,20 +140,7 @@ void RenderSystem::BeginScene()
 	}
 	m_isSwapChainOccluded = false;
 
-	// Handle window resize (we don't resize directly in the WM_SIZE handler)
-	m_screenWidth = m_inputHandle->GetResizeWidth();
-	m_screenHeight = m_inputHandle->GetResizeHeight();
-	if (m_screenWidth != 0 && m_screenHeight != 0)
-	{
-		CleanupRenderTarget();
-		CleanupDepthBuffer();
-		m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
-		CreateRenderTarget();
-		CreateDepthBuffer();
-	}
-
-	const float color[3] = { 0.9, 1, 1 }; // CLEAR COLOR
-	m_deviceContext->ClearRenderTargetView(m_renderTargetView, color);
+	m_deviceContext->ClearRenderTargetView(m_renderTargetView, m_clearColor);
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 	m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
@@ -119,43 +152,49 @@ void RenderSystem::EndScene()
 	m_isSwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
 }
 
-void RenderSystem::BeginTextureScene(UINT width, UINT height)
+// MENU VALUES
+float* RenderSystem::LightDirection()
 {
-	const float color[3] = { 0.9, 1, 1 }; // CLEAR COLOR
-	m_deviceContext->ClearRenderTargetView(m_altRenderTargetView, color);
-	m_deviceContext-> OMSetRenderTargets(1, &m_altRenderTargetView, m_depthStencilView);
-
-	InitializeViewport(width, height);
-
-	m_deviceContext->RSSetViewports(1, &m_viewport);
+	return m_lightDirection;
 }
 
-void RenderSystem::Shutdown()
+float* RenderSystem::ClearColor()
 {
-	if (m_colorShader)
+	return m_clearColor;
+}
+
+float& RenderSystem::AmbientStrength()
+{
+	return m_ambientStrength;
+}
+
+float& RenderSystem::CelThreshold()
+{
+	return m_celThreshold;
+}
+
+bool RenderSystem::ResetModel(const char* filename)
+{
+	ModelClass* temp_model = new ModelClass;
+	bool result = temp_model->Initialize(m_device, filename);
+	if (!result)
 	{
-		m_colorShader->Shutdown();
-		delete m_colorShader;
-		m_colorShader = nullptr;
+		if (temp_model)
+		{
+			delete temp_model;
+			temp_model = nullptr;
+		}
+		return false;
 	}
+	
 	if (m_model)
 	{
-		m_model->Shutdown();
 		delete m_model;
 		m_model = nullptr;
 	}
-	if (m_camera)
-	{
-		delete m_camera;
-		m_camera = nullptr;
-	}
-	
-	ImGui_ImplDX11_Shutdown();
-	CleanupRasterizerState();
-	CleanupDepthStencilState();
-	CleanupDepthBuffer();
-	CleanupRenderTarget();
-	CleanupDeviceD3D();
+
+	m_model = temp_model;
+	return true;
 }
 
 // HELPER FUNCTIONS
@@ -233,33 +272,6 @@ bool RenderSystem::CreateRenderTarget()
 	return true;
 }
 
-bool RenderSystem::CreateTextureRenderTarget(UINT width, UINT height)
-{
-	D3D11_TEXTURE2D_DESC td;
-	ZeroMemory(&td, sizeof(td));
-	td.Width = width;
-	td.Height = height;
-	td.MipLevels = 1;
-	td.ArraySize = 1;
-	td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	td.SampleDesc.Count = 1;
-	td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	td.Usage = D3D11_USAGE_DEFAULT;
-
-	HRESULT result = m_device->CreateTexture2D(&td, nullptr, &m_altRenderTargetTexture);
-	if (FAILED(result))
-		return false;
-
-	result = m_device->CreateRenderTargetView(m_altRenderTargetTexture, nullptr, &m_altRenderTargetView);
-	if (FAILED(result))
-		return false;
-	result = m_device->CreateShaderResourceView(m_altRenderTargetTexture, nullptr, &m_altShaderResourceView);
-	if (FAILED(result))
-		return false;
-
-	return true;
-}
-
 void RenderSystem::CleanupRenderTarget()
 {
 	if (m_renderTargetView)
@@ -296,15 +308,6 @@ bool RenderSystem::CreateDepthStencilState()
 		return false;
 
 	return true;
-}
-
-void RenderSystem::CleanupDepthStencilState()
-{
-	if (m_depthStencilState)
-	{
-		m_depthStencilState->Release();
-		m_depthStencilState = nullptr;
-	}
 }
 
 bool RenderSystem::CreateDepthBuffer()
@@ -355,7 +358,7 @@ void RenderSystem::CleanupDepthBuffer()
 	}
 }
 
-bool RenderSystem::CreateRasterizerState()
+bool RenderSystem::CreateRasterState()
 {
 	D3D11_RASTERIZER_DESC rd;
 	ZeroMemory(&rd, sizeof(rd));
@@ -376,15 +379,6 @@ bool RenderSystem::CreateRasterizerState()
 	m_deviceContext->RSSetState(m_rasterState);
 
 	return true;
-}
-
-void RenderSystem::CleanupRasterizerState()
-{
-	if (m_rasterState)
-	{
-		m_rasterState->Release();
-		m_rasterState = nullptr;
-	}
 }
 
 void RenderSystem::InitializeViewport(float width, float height)

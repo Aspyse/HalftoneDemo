@@ -3,10 +3,11 @@
 #include "input_system.h"
 #include "camera.h"
 #include "model.h"
-#include "color_shader.h"
+#include "base_shader.h"
 #include <d3d11.h>
 #include <DirectXMath.h>
 using namespace DirectX;
+
 
 class RenderSystem
 {
@@ -15,9 +16,17 @@ public:
 	RenderSystem(const RenderSystem&);
 	~RenderSystem();
 
-	bool Initialize(HWND, WNDCLASSEXW, InputSystem*);
+	bool Initialize(HWND, WNDCLASSEXW);
 	void Shutdown();
-	bool Render();
+	bool Render(InputSystem*);
+
+	// Menu values
+	float* LightDirection();
+	float* ClearColor();
+	float& AmbientStrength();
+	float& CelThreshold();
+
+	bool ResetModel(const char*);
 
 private:
 	void BeginScene();
@@ -28,13 +37,8 @@ private:
 	bool CreateRenderTarget();
 	void CleanupRenderTarget();
 
-	bool CreateTextureRenderTarget(UINT, UINT);
-	void BeginTextureScene(UINT, UINT);
-
 	bool CreateDepthStencilState();
-	void CleanupDepthStencilState();
-	bool CreateRasterizerState();
-	void CleanupRasterizerState();
+	bool CreateRasterState();
 
 	bool CreateDepthBuffer();
 	void CleanupDepthBuffer();
@@ -46,10 +50,9 @@ private:
 	void ResetViewport();
 
 private:
-	InputSystem* m_inputHandle = nullptr;
 	CameraClass* m_camera = nullptr;
 	ModelClass* m_model = nullptr;
-	ColorShader* m_colorShader = nullptr;
+	BaseShader* m_baseShader = nullptr;
 
 	bool m_isSwapChainOccluded = false;
 
@@ -57,10 +60,6 @@ private:
 	ID3D11Device* m_device = nullptr;
 	ID3D11DeviceContext* m_deviceContext = nullptr;
 	ID3D11RenderTargetView* m_renderTargetView = nullptr;
-	
-	ID3D11Texture2D* m_altRenderTargetTexture = nullptr;
-	ID3D11RenderTargetView* m_altRenderTargetView = nullptr;
-	ID3D11ShaderResourceView* m_altShaderResourceView = nullptr;
 
 	ID3D11Texture2D* m_depthStencilBuffer = nullptr;
 	ID3D11DepthStencilState* m_depthStencilState = nullptr;
@@ -74,5 +73,10 @@ private:
 	D3D11_VIEWPORT m_viewport = {};
 
 	UINT m_screenWidth = 0, m_screenHeight = 0;
-	UINT m_texWidth = 0, m_texHeight = 0;
+
+	// Menu values
+	float m_lightDirection[3] = { -0.3f, 1.0f, -0.3f };
+	float m_clearColor[3] = { 0.9f, 1.0f, 1.0f };
+	float m_ambientStrength = 0.5f;
+	float m_celThreshold = 0.4f;
 };
