@@ -41,19 +41,30 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_model = new ModelClass;
 	m_model->Initialize(m_device, "Models/dragon_vrip.ply"); // TODO: Handle failure
 	
-	m_baseShader = new BaseShader;
-	m_baseShader->Initialize(m_device, hwnd, L"Shaders/light.ps");
+	m_geometryPass = new GeometryPass;
+	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
+	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	m_geometryPass->SetShaderParameters(m_deviceContext, albedoColor);
+
+	m_lightingShader = new LightingShader;
+	m_lightingShader->Initialize(m_device, L"Shaders/base.ps");
 
 	return true;
 }
 
 void RenderSystem::Shutdown()
 {
-	if (m_baseShader)
+	if (m_lightingShader)
 	{
-		m_baseShader->Shutdown();
-		delete m_baseShader;
-		m_baseShader = nullptr;
+		m_lightingShader->Shutdown();
+		delete m_lightingShader;
+		m_lightingShader = nullptr;
+	}
+	if (m_geometryPass)
+	{
+		m_geometryPass->Shutdown();
+		delete m_geometryPass;
+		m_geometryPass = nullptr;
 	}
 	if (m_model)
 	{
@@ -104,23 +115,43 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 		InitializeViewport(m_screenWidth, m_screenHeight);
 		InitializeMatrices();
 	}
-	
+
 	// Clear the buffers to begin the scene
 	BeginScene();
 
+	// Update camera
 	m_camera->Frame(inputHandle);
 
 	XMMATRIX viewMatrix;
 	m_camera->GetViewMatrix(viewMatrix);
 
+	// Update model
 	m_model->Render(m_deviceContext);
 
-	XMFLOAT4 ambientColor = XMFLOAT4(m_clearColor[0]* m_ambientStrength, m_clearColor[1]* m_ambientStrength, m_clearColor[2]* m_ambientStrength, 1.0f);
+	// GEOMETRY PASS
+	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	m_geometryPass->UpdateShaderParameters(m_deviceContext, viewMatrix, m_projectionMatrix, albedoColor);
+	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount());
 
-	XMFLOAT4 lightColor = XMFLOAT4(0.9f, 0.9f, 0.9f, 1.0f);
+	// LIGHTING PASS
+
+
+	/*ID3D11ShaderResourceView* gBuffer[] = {
+		m_geometryPass->GetGBuffer(0),
+		m_geometryPass->GetGBuffer(1),
+		m_geometryPass->GetGBuffer(2),
+		m_geometryPass->GetShadowMap()
+	};*/
+	//m_deviceContext->PSSetShaderResources(0, 4, gBuffer);
+
+	// Update shader parameters
+	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
+
+	XMFLOAT3 lightColor = XMFLOAT3(0.9f, 0.9f, 0.9f);
 	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
 	float celThreshold = 0.0f;
-	m_baseShader->Render(m_deviceContext, m_model->GetIndexCount(), m_worldMatrix, viewMatrix, m_projectionMatrix, ambientColor, lightColor, lightDirection, m_celThreshold);
+	//m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, lightDirection, lightColor, ambientColor, celThreshold);
+	//m_lightingShader->Render(m_deviceContext);
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -224,7 +255,7 @@ bool RenderSystem::CreateDeviceD3D(HWND hWnd)
 	sd.Flags = 0;
 
 	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	
 	D3D_FEATURE_LEVEL featureLevel;
 	const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
 	HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &featureLevel, &m_deviceContext);
@@ -395,6 +426,7 @@ void RenderSystem::InitializeViewport(float width, float height)
 
 void RenderSystem::InitializeMatrices()
 {
+	// TODO: consider moving to CameraClass
 	float fieldOfView, screenAspect, screenNear, screenDepth;
 	fieldOfView = 0.5f*(3.14159f / 4.0f);
 	screenAspect = (float)m_screenWidth / (float)m_screenHeight;

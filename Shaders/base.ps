@@ -1,0 +1,83 @@
+Texture2D albedoTexture : register(t0);
+Texture2D normalRoughnessTexture : register(t1);
+Texture2D depthTexture : register(t2);
+Texture2D shadowMap : register(t3);
+
+SamplerState pointClamp : register(s0);
+SamplerComparisonState shadowSampler : register(s1); // D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR and ComparisonFunc = LESS_EQUAL
+
+cbuffer MatrixBuffer : register(b0)
+{
+	float4x4 invProj;
+};
+
+cbuffer LightBuffer : register(b1)
+{
+	float4x4 lightViewProjVS;
+	float3 lightDirectionVS;
+	float pad0;
+	float3 lightColor;
+	float pad1;
+	float3 ambientColor;
+	float pad2;
+};
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+};
+
+float3 ReconstructViewPos(float2 uv)
+{
+	float depth = depthTexture.Sample(pointClamp, uv).r;
+	float4 clip = float4(uv * 2 - 1, depth, 1);
+	float4 viewH = mul(clip, invProj);
+	return viewH.xyz / viewH.w;
+}
+
+float ShadowVisibility(float3 viewPos)
+{
+	float4 posLS = mul(float4(viewPos, 1), lightViewProjVS);
+	float2 uv = posLS.xy / posLS.w * 0.5 + 0.5;
+	float depth = posLS.z / posLS.w - 0.002;
+
+	return shadowMap.SampleCmpLevelZero(shadowSampler, uv, depth);
+}
+
+float4 LightPixelShader(PixelInputType input) : SV_TARGET
+{
+	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
+	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
+	float3 normal = nr.rgb * 2 - 1;
+	float rough = nr.a;
+
+	float3 viewPos = ReconstructViewPos(input.uv);
+	float3 V = normalize(-viewPos);
+
+	float vis = ShadowVisibility(viewPos);
+
+	float3 L = normalize(-lightDirectionVS);
+	float3 H = normalize(V + L);
+
+	// Schlick Fresnel
+	const float F0 = 0.04;
+	float VdotH = saturate(dot(V, H));
+	float3 F = F0 + (1 - F0) * pow(1 - VdotH, 5);
+
+	float shiny = lerp(2048.0, 16.0, rough*rough);
+
+	// blinn-phong
+	float NdotH = saturate(dot(normal, H));
+	float D = pow(NdotH, shiny);
+
+	float NdotL = saturate(dot(normal, L));
+	float3 spec = D * F * NdotL * lightColor * vis;
+
+	// diffuse
+	float3 diff = albedo * (NdotL / 3.14159) * lightColor * vis;
+
+	float3 ambient = albedo * ambientColor;
+
+	return float4(diff + spec + ambient, 1);
+	//return float4(1.0, 1.0, 0.0, 1.0);
+};

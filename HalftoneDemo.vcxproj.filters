@@ -22,6 +22,12 @@
     <Filter Include="Source Files\External\ImGui">
       <UniqueIdentifier>{aa50ad68-e582-4aa6-a23c-f2e736fe6c48}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Subsystems">
+      <UniqueIdentifier>{790cacc8-635c-452c-9d3f-7dd2c90469b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Classes">
+      <UniqueIdentifier>{8b286267-0239-4665-9e63-f5fb98fc5351}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -51,28 +57,31 @@
     <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
       <Filter>Source Files\External\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="Subsystems\gui_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Subsystems\input_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Subsystems\render_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Classes\camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Classes\model.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="external\miniply.cpp">
       <Filter>Source Files\External</Filter>
     </ClCompile>
-    <ClCompile Include="render_texture.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Classes\lighting_shader.cpp">
+      <Filter>Source Files\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="Classes\base_shader.cpp">
+    <ClCompile Include="Classes\camera.cpp">
+      <Filter>Source Files\Classes</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\model.cpp">
+      <Filter>Source Files\Classes</Filter>
+    </ClCompile>
+    <ClCompile Include="Subsystems\gui_system.cpp">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClCompile>
+    <ClCompile Include="Subsystems\input_system.cpp">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClCompile>
+    <ClCompile Include="Subsystems\render_system.cpp">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes\render_texture.cpp">
+      <Filter>Source Files\Classes</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\geometry_pass.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
   </ItemGroup>
@@ -104,42 +113,54 @@
     <ClInclude Include="imgui\backends\imgui_impl_win32.h">
       <Filter>Source Files\External\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="Subsystems\gui_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Subsystems\input_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Subsystems\render_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Classes\camera.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Classes\model.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="external\miniply.h">
       <Filter>Source Files\External</Filter>
     </ClInclude>
-    <ClInclude Include="render_texture.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="Classes\lighting_shader.h">
+      <Filter>Source Files\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="Classes\base_shader.h">
+    <ClInclude Include="Classes\camera.h">
+      <Filter>Source Files\Classes</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\model.h">
+      <Filter>Source Files\Classes</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\gui_system.h">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\input_system.h">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClInclude>
+    <ClInclude Include="Subsystems\render_system.h">
+      <Filter>Source Files\Subsystems</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\render_texture.h">
+      <Filter>Source Files\Classes</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\geometry_pass.h">
       <Filter>Source Files\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\light.ps">
+    <None Include="Shaders\base.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="Shaders\base.vs">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="halftone.ps">
+    <None Include="Shaders\flat.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="Shaders\flat.ps">
+    <None Include="Shaders\halftone.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\geometry.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\geometry.vs">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow.vs">
       <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>

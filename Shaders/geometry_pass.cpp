@@ -1,0 +1,499 @@
+﻿#include "geometry_pass.h"
+#include <fstream>
+
+GeometryPass::GeometryPass() {}
+GeometryPass::GeometryPass(const GeometryPass&) {}
+GeometryPass::~GeometryPass() {}
+
+ID3D11ShaderResourceView* GeometryPass::GetGBuffer(UINT index)
+{
+    // TODO: figure out if there's a better way
+    switch (index)
+    {
+    case 0:
+        return m_albedoSRV;
+    case 1:
+        return m_normalSRV;
+    case 2:
+        return m_depthSRV;
+    default:
+        return nullptr;
+    }
+}
+
+ID3D11ShaderResourceView* GeometryPass::GetShadowMap()
+{
+    return m_shadowSRV;
+}
+
+bool GeometryPass::Initialize(ID3D11Device* device, UINT width, UINT height)
+{
+    m_texWidth = width;
+    m_texHeight = height;
+
+	if (!CompileShader(device))
+		return false;
+
+    // Texture sampler
+    if (!InitializeSampler(device))
+        return false;
+
+    if (!InitializeGBuffer(device))
+        return false;
+
+    if (!InitializeShadow(device))
+        return false;
+
+	return true;
+}
+
+bool GeometryPass::CompileShader(ID3D11Device* device)
+{
+    ID3D10Blob* errorMessage;
+    ID3D10Blob* vertexShaderBuffer;
+    ID3D10Blob* pixelShaderBuffer;
+
+    wchar_t vsFilename[128], psFilename[128];
+
+    int error = wcscpy_s(vsFilename, 128, L"Shaders/geometry.vs");
+    if (error != 0)
+        return false;
+
+    error = wcscpy_s(psFilename, 128, L"Shaders/geometry.ps");
+    if (error != 0)
+        return false;
+    
+    HRESULT result = D3DCompileFromFile(vsFilename, nullptr, nullptr, "GeometryVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &vertexShaderBuffer, &errorMessage);
+    if (FAILED(result))
+    {
+        if (errorMessage)
+            OutputShaderErrorMessage(errorMessage, psFilename);
+        return false;
+    }
+    result = D3DCompileFromFile(psFilename, nullptr, nullptr, "GeometryPixelShader", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &pixelShaderBuffer, &errorMessage);
+    if (FAILED(result))
+    {
+        if (errorMessage)
+            OutputShaderErrorMessage(errorMessage, psFilename);
+        return false;
+    }
+
+    result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), nullptr, &m_vertexShader);
+    if (FAILED(result))
+        return false;
+
+    // Create pixel shader from buffer
+    result = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), pixelShaderBuffer->GetBufferSize(), nullptr, &m_pixelShader);
+    if (FAILED(result))
+        return false;
+
+    D3D11_INPUT_ELEMENT_DESC pl[3];
+    pl[0].SemanticName = "POSITION";
+    pl[0].SemanticIndex = 0;
+    pl[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    pl[0].InputSlot = 0;
+    pl[0].AlignedByteOffset = 0;
+    pl[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    pl[0].InstanceDataStepRate = 0;
+
+    pl[1].SemanticName = "TEXCOORD";
+    pl[1].SemanticIndex = 0;
+    pl[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+    pl[1].InputSlot = 0;
+    pl[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    pl[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    pl[1].InstanceDataStepRate = 0;
+
+    pl[2].SemanticName = "NORMAL";
+    pl[2].SemanticIndex = 0;
+    pl[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    pl[2].InputSlot = 0;
+    pl[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    pl[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    pl[2].InstanceDataStepRate = 0;
+
+    UINT numElements = sizeof(pl) / sizeof(pl[0]);
+
+    result = device->CreateInputLayout(pl, numElements, vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), &m_layout);
+    if (FAILED(result))
+        return false;
+
+    // Release vertex and pixel shader buffers
+    vertexShaderBuffer->Release();
+    vertexShaderBuffer = 0;
+
+    pixelShaderBuffer->Release();
+    pixelShaderBuffer = 0;
+
+    // Create camera buffer description
+    D3D11_BUFFER_DESC cbd;
+    cbd.Usage = D3D11_USAGE_DYNAMIC;
+    cbd.ByteWidth = sizeof(CameraBufferType);
+    cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    cbd.MiscFlags = 0;
+    cbd.StructureByteStride = 0;
+
+    result = device->CreateBuffer(&cbd, nullptr, &m_cameraBuffer);
+    if (FAILED(result))
+        return false;
+
+    D3D11_BUFFER_DESC mbd;
+    mbd.Usage = D3D11_USAGE_DYNAMIC;
+    mbd.ByteWidth = sizeof(MaterialBufferType);
+    mbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    mbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    mbd.MiscFlags = 0;
+    mbd.StructureByteStride = 0;
+
+    result = device->CreateBuffer(&mbd, nullptr, &m_materialBuffer);
+    if (FAILED(result))
+        return false;
+
+    return true;
+}
+
+bool GeometryPass::InitializeSampler(ID3D11Device* device)
+{
+    D3D11_SAMPLER_DESC sd;
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.MipLODBias = 0.0f;
+    sd.MaxAnisotropy = 1;
+    sd.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    sd.BorderColor[0] = 0;
+    sd.BorderColor[1] = 0;
+    sd.BorderColor[2] = 0;
+    sd.BorderColor[3] = 0;
+    sd.MinLOD = 0;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+
+    // Create the texture sampler state.
+    HRESULT result = device->CreateSamplerState(&sd, &m_sampleStateWrap);
+    if (FAILED(result))
+        return false;
+
+    return true;
+}
+
+bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
+{
+    D3D11_TEXTURE2D_DESC td;
+    td.Width = m_texWidth;
+    td.Height = m_texHeight;
+    td.MipLevels = 1;
+    td.ArraySize = 1;
+    td.SampleDesc.Count = 1;
+    td.Usage = D3D11_USAGE_DEFAULT;
+    td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    // Albedo render target
+    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    ID3D11Texture2D* albedoTex = nullptr;
+    HRESULT result = device->CreateTexture2D(&td, nullptr, &albedoTex);
+    if (FAILED(result))
+        return false;
+
+    // Normal + Roughness render target
+    td.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+    ID3D11Texture2D* normalTex = nullptr;
+    result = device->CreateTexture2D(&td, nullptr, &normalTex);
+    if (FAILED(result))
+        return false;
+
+    // Albedo RTV
+    device->CreateRenderTargetView(albedoTex, nullptr, &m_albedoRTV);
+
+    // Normal+Roughness RTV
+    device->CreateRenderTargetView(normalTex, nullptr, &m_normalRTV);
+
+    // Albedo SRV
+    device->CreateShaderResourceView(albedoTex, nullptr, &m_albedoSRV);
+
+    // Normal+Roughness SRV
+    device->CreateShaderResourceView(normalTex, nullptr, &m_normalSRV);
+
+    // Release textures
+    albedoTex->Release();
+    albedoTex = nullptr;
+    normalTex->Release();
+    normalTex = nullptr;
+
+
+    // Create depth stencil texture
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = m_texWidth;
+    depthDesc.Height = m_texHeight;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // Allows both depth-stencil and shader resource views
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.SampleDesc.Quality = 0;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    depthDesc.CPUAccessFlags = 0;
+    depthDesc.MiscFlags = 0;
+
+    ID3D11Texture2D* depthTexture;
+    result = device->CreateTexture2D(&depthDesc, nullptr, &depthTexture);
+    if (FAILED(result))
+        return false;
+
+    // Create depth stencil view
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Texture2D.MipSlice = 0;
+
+    device->CreateDepthStencilView(depthTexture, &dsvDesc, &m_dsv);
+
+    // Create shader resource view
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+
+    device->CreateShaderResourceView(depthTexture, &srvDesc, &m_depthSRV);
+
+    depthTexture->Release();
+    depthTexture = nullptr;
+
+    return true;
+}
+
+void GeometryPass::Shutdown()
+{
+    if (m_shadowSRV)
+    {
+        m_shadowSRV->Release();
+        m_shadowSRV = nullptr;
+    }
+    if (m_shadowDSV)
+    {
+        m_shadowDSV->Release();
+        m_shadowDSV = nullptr;
+    }
+    if (m_shadowShader)
+    {
+        m_shadowShader->Release();
+        m_shadowShader = nullptr;
+    }
+    if (m_normalSRV)
+    {
+        m_normalSRV->Release();
+        m_normalSRV = nullptr;
+    }
+    if (m_normalRTV)
+    {
+        m_normalRTV->Release();
+        m_normalRTV = nullptr;
+    }
+    if (m_albedoSRV)
+    {
+        m_albedoSRV->Release();
+        m_albedoSRV = nullptr;
+    }
+    if (m_albedoRTV)
+    {
+        m_albedoRTV->Release();
+        m_albedoRTV = nullptr;
+    }
+    if (m_materialBuffer)
+    {
+        m_materialBuffer->Release();
+        m_materialBuffer = nullptr;
+    }
+    if (m_cameraBuffer)
+    {
+        m_cameraBuffer->Release();
+        m_cameraBuffer = nullptr;
+    }
+    if (m_sampleStateWrap)
+    {
+        m_sampleStateWrap->Release();
+        m_sampleStateWrap = nullptr;
+    }
+    if (m_layout)
+    {
+        m_layout->Release();
+        m_layout = nullptr;
+    }
+    if (m_pixelShader)
+    {
+        m_pixelShader->Release();
+        m_pixelShader = nullptr;
+    }
+    if (m_vertexShader)
+    {
+        m_vertexShader->Release();
+        m_vertexShader = nullptr;
+    }
+}
+
+bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMFLOAT3 albedoColor)
+{
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (FAILED(result))
+        return false;
+
+    MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
+    dataPtr2->roughness = 0.2f;
+    dataPtr2->useAlbedoTexture = false;
+    dataPtr2->albedoColor = albedoColor;
+
+    deviceContext->Unmap(m_materialBuffer, 0);
+
+    UINT bufferNumber = 0;
+
+    deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_materialBuffer);
+}
+
+
+bool GeometryPass::UpdateShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor)
+{
+    SetShaderParameters(deviceContext, albedoColor);
+    
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT result = deviceContext->Map(m_cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (FAILED(result))
+        return false;
+
+    CameraBufferType* dataPtr = (CameraBufferType*)mappedResource.pData;
+
+    XMMATRIX viewProjMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+    viewProjMatrix = XMMatrixTranspose(viewProjMatrix);
+    dataPtr->viewProj = viewProjMatrix;
+
+    deviceContext->Unmap(m_cameraBuffer, 0);
+
+    UINT bufferNumber = 0;
+
+    deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_cameraBuffer);
+
+    //deviceContext->PSSetShaderResources(0, 1, &texture);
+
+    return true;
+}
+
+
+void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount)
+{
+    // Set the render targets (albedo and normal) along with the depth stencil view
+    ID3D11RenderTargetView* renderTargets[2] = { m_albedoRTV, m_normalRTV };
+    //deviceContext->OMSetRenderTargets(2, renderTargets, m_dsv);
+
+    // Clear the render target views
+    float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    deviceContext->ClearRenderTargetView(m_albedoRTV, clearColor);
+    deviceContext->ClearRenderTargetView(m_normalRTV, clearColor);
+    
+    deviceContext->IASetInputLayout(m_layout);
+
+	deviceContext->VSSetShader(m_vertexShader, nullptr, 0);
+	deviceContext->PSSetShader(m_pixelShader, nullptr, 0);
+
+	deviceContext->PSSetSamplers(0, 1, &m_sampleStateWrap);
+
+	deviceContext->DrawIndexed(indexCount, 0, 0);
+
+    RenderShadow(deviceContext);
+}
+
+
+bool GeometryPass::InitializeShadow(ID3D11Device* device)
+{
+    ID3D10Blob* errorMessage;
+    ID3D10Blob* shadowBuffer;
+
+    wchar_t shadowFilename[128];
+    wcscpy_s(shadowFilename, 128, L"Shaders/shadow.vs");
+
+    HRESULT result = D3DCompileFromFile(shadowFilename, nullptr, nullptr, "ShadowVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &shadowBuffer, &errorMessage);
+    if (FAILED(result))
+    {
+        if (errorMessage)
+            OutputShaderErrorMessage(errorMessage, shadowFilename);
+        return false;
+    }
+
+    result = device->CreateVertexShader(shadowBuffer->GetBufferPointer(), shadowBuffer->GetBufferSize(), nullptr, &m_shadowShader);
+    if (FAILED(result))
+        return false;
+    
+    D3D11_TEXTURE2D_DESC sd = {};
+    sd.Width = m_shadowMapSize;
+    sd.Height = m_shadowMapSize;
+    sd.MipLevels = 1;
+    sd.ArraySize = 1;
+    sd.Format = DXGI_FORMAT_R32_TYPELESS;
+    sd.SampleDesc.Count = 1;
+    sd.Usage = D3D11_USAGE_DEFAULT;
+    sd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+    ID3D11Texture2D* shadowTex = nullptr;
+    result = device->CreateTexture2D(&sd, nullptr, &shadowTex);
+    if (FAILED(result))
+        return false;
+
+    // 2) Depth‐Stencil View (for rendering into the shadow map)
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    device->CreateDepthStencilView(shadowTex, &dsvDesc, &m_shadowDSV);
+
+    // 3) Shader‐Resource View (for sampling the shadow map in the lighting pass)
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    device->CreateShaderResourceView(shadowTex, &srvDesc, &m_shadowSRV);
+
+    shadowTex->Release();
+    shadowTex = nullptr;
+
+    return true;
+}
+
+void GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext)
+{
+    // Bind no color RTs, only the shadow DSV
+    ID3D11RenderTargetView* nullRT = nullptr;
+    deviceContext->OMSetRenderTargets(0, &nullRT, m_shadowDSV);
+
+    // Set viewport to shadow map size
+    D3D11_VIEWPORT vp = { 0, 0, (float)m_shadowMapSize, (float)m_shadowMapSize, 0, 1 };
+    deviceContext->RSSetViewports(1, &vp);
+
+    // Clear depth
+    deviceContext->ClearDepthStencilView(m_shadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+    // Use a simple depth‐only shader: 
+    //   VS: transform positions by lightViewProj matrix
+    //   PS: (optional) empty or writes nothing
+    deviceContext->VSSetShader(m_shadowShader, nullptr, 0);
+    deviceContext->PSSetShader(nullptr, nullptr, 0);
+}
+
+void GeometryPass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, WCHAR* shaderFilename)
+{
+    char* compileErrors;
+    unsigned long long bufferSize, i;
+    std::ofstream fout;
+
+    compileErrors = (char*)(errorMessage->GetBufferPointer());
+
+    bufferSize = errorMessage->GetBufferSize();
+    fout.open("shader-error.txt");
+    for (i = 0; i < bufferSize; i++)
+    {
+        fout << compileErrors[i];
+    }
+    fout.close();
+
+    errorMessage->Release();
+    errorMessage = 0;
+}

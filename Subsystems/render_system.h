@@ -3,7 +3,8 @@
 #include "input_system.h"
 #include "camera.h"
 #include "model.h"
-#include "base_shader.h"
+#include "geometry_pass.h"
+#include "lighting_shader.h"
 #include <d3d11.h>
 #include <DirectXMath.h>
 using namespace DirectX;
@@ -52,7 +53,8 @@ private:
 private:
 	CameraClass* m_camera = nullptr;
 	ModelClass* m_model = nullptr;
-	BaseShader* m_baseShader = nullptr;
+	GeometryPass* m_geometryPass = nullptr;
+	LightingShader* m_lightingShader = nullptr;
 
 	bool m_isSwapChainOccluded = false;
 

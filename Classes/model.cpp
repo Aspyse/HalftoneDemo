@@ -54,6 +54,8 @@ bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const cha
 	if (!gotVerts || !gotFaces)
 		return false;
 
+	CalculateNormals(outVertices, outIndices);
+
 	return true;
 }
 
@@ -105,8 +107,6 @@ bool ModelClass::Initialize(ID3D11Device* device, const char* filename)
 	ULONG* indices = nullptr;
 	
 	LoadPLY(vertices, indices, filename);
-
-	CalculateNormals(vertices, indices);
 
 	// Create description of static vertex buffer
 	D3D11_BUFFER_DESC vbd;
