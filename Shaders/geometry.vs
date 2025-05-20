@@ -16,7 +16,7 @@ struct PixelInputType
 {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD0;
-    float3 normalVS : NORMAL;
+    float3 normal : NORMAL;
 };
 
 PixelInputType GeometryVertexShader(VertexInputType input)
@@ -30,8 +30,8 @@ PixelInputType GeometryVertexShader(VertexInputType input)
     output.position = mul(input.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
 
-    output.normalVS = normalize(mul(input.normal, (float3x3)viewMatrix));
-    //output.normal = input.normal;
+    //output.normal = normalize(mul(input.normal, (float3x3)viewMatrix));
+    output.normal = input.normal;
 
     output.uv = input.uv;
 

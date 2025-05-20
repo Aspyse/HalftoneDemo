@@ -117,7 +117,8 @@ bool LightingShader::InitializeSampler(ID3D11Device* device)
 	HRESULT result;
 
 	// Regular sampler (pointClamp)
-	D3D11_SAMPLER_DESC sd = {};
+	D3D11_SAMPLER_DESC sd;
+	ZeroMemory(&sd, sizeof(sd));
 	sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -137,7 +138,8 @@ bool LightingShader::InitializeSampler(ID3D11Device* device)
 		return false;
 
 	// Shadow comparison sampler (shadowSampler)
-	D3D11_SAMPLER_DESC shadowDesc = {};
+	D3D11_SAMPLER_DESC shadowDesc;
+	ZeroMemory(&shadowDesc, sizeof(shadowDesc));
 	shadowDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	shadowDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	shadowDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -183,10 +185,10 @@ void LightingShader::Shutdown() // Consider splitting up
 	}
 }
 
-bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX lightViewProjVS, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
+bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX viewProj, XMMATRIX lightViewProj, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
 {
 	XMVECTOR det;
-	XMMATRIX invProj = XMMatrixInverse(&det, projectionMatrix);
+	XMMATRIX invViewProj = XMMatrixInverse(&det, viewProj);
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -195,7 +197,7 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 
 	MatrixBufferType* dataPtr = (MatrixBufferType*)mappedResource.pData;
 
-	dataPtr->invProj = XMMatrixTranspose(invProj);
+	dataPtr->invViewProj = XMMatrixTranspose(invViewProj);
 
 	deviceContext->Unmap(m_matrixBuffer, 0);
 
@@ -211,7 +213,7 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 
 	LightBufferType* dataPtr2 = (LightBufferType*)mappedResource.pData;
 
-	dataPtr2->lightViewProjVS = XMMatrixTranspose(lightViewProjVS);
+	dataPtr2->lightViewProj = XMMatrixTranspose(lightViewProj);
 	dataPtr2->lightDirectionVS = lightDirectionVS;
 	dataPtr2->lightColor = lightColor;
 	dataPtr2->ambientColor = ambientColor;

@@ -224,7 +224,8 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
 
 
     // Create depth stencil texture
-    D3D11_TEXTURE2D_DESC depthDesc = {};
+    D3D11_TEXTURE2D_DESC depthDesc;
+    ZeroMemory(&depthDesc, sizeof(depthDesc));
     depthDesc.Width = m_texWidth;
     depthDesc.Height = m_texHeight;
     depthDesc.MipLevels = 1;
@@ -243,7 +244,8 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
         return false;
 
     // Create depth stencil view
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+    ZeroMemory(&dsvDesc, sizeof(dsvDesc));
     dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     dsvDesc.Texture2D.MipSlice = 0;
@@ -251,7 +253,8 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
     device->CreateDepthStencilView(depthTexture, &dsvDesc, &m_dsv);
 
     // Create shader resource view
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
     srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
@@ -342,7 +345,7 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMFLO
         return false;
 
     MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
-    dataPtr2->roughness = 0.9f;
+    dataPtr2->roughness = 0.95f;
     dataPtr2->useAlbedoTexture = false;
     dataPtr2->albedoColor = albedoColor;
 
@@ -400,6 +403,9 @@ void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount, fl
 	deviceContext->PSSetSamplers(0, 1, &m_sampleStateWrap);
 
 	deviceContext->DrawIndexed(indexCount, 0, 0);
+
+    ID3D11RenderTargetView* nullRTVs[2] = { nullptr, nullptr };
+    deviceContext->OMSetRenderTargets(2, nullRTVs, nullptr);
 }
 
 

@@ -8,12 +8,12 @@ SamplerComparisonState shadowSampler : register(s1); // D3D11_FILTER_COMPARISON_
 
 cbuffer MatrixBuffer : register(b0)
 {
-	float4x4 invProj;
+	float4x4 invViewProj;
 };
 
 cbuffer LightBuffer : register(b1)
 {
-	float4x4 lightViewProjVS;
+	float4x4 lightViewProj;
 	float3 lightDirectionVS;
 	float pad0;
 	float3 lightColor;
@@ -25,21 +25,30 @@ cbuffer LightBuffer : register(b1)
 struct PixelInputType
 {
 	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
 };
 
 float3 ReconstructViewPos(float2 uv)
 {
 	float depth = depthTexture.Sample(pointClamp, uv).r;
 	float4 clip = float4(uv * 2 - 1, depth, 1);
-	float4 viewH = mul(clip, invProj);
-	return viewH.xyz / viewH.w;
+	float4 worldH = mul(clip, invViewProj);
+	return worldH.xyz / worldH.w;
 }
 
-float ShadowVisibility(float3 viewPos)
+float ShadowVisibility(float3 worldPos)
 {
-	float4 posLS = mul(float4(viewPos, 1), lightViewProjVS);
-	float2 uv = posLS.xy / posLS.w * 0.5 + 0.5;
-	float depth = posLS.z / posLS.w;
+	float4 posLS = mul(float4(worldPos, 1), lightViewProj);
+	
+	posLS.xyz /= posLS.w;
+	float2 uv = posLS.xy * 0.5 + 0.5;
+	uv.y = 1 - uv.y;
+	
+	const float bias = 0.002;
+	float depth = saturate(posLS.z - bias);
+
+	//float2 uv = posLS.xy / posLS.w * 0.5 + 0.5;
+	//float depth = posLS.z / posLS.w;
 
 	return shadowMap.SampleCmpLevelZero(shadowSampler, uv, depth);
 }
@@ -51,16 +60,16 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	float3 normal = normalize(nr.rgb * 2 - 1);
 	float rough = nr.a;
 
-	float3 viewPos = ReconstructViewPos(input.uv);
-	float3 V = normalize(-viewPos);
+	float3 worldPos = ReconstructViewPos(input.uv);
+	float3 V = normalize(-worldPos);
 
-	float vis = ShadowVisibility(viewPos);
+	float vis = ShadowVisibility(worldPos);
 
 	float3 L = normalize(-lightDirectionVS);
 	float3 H = normalize(V + L);
 
 	// Schlick Fresnel
-	const float F0 = 0.04;
+	const float F0 = float3(0.04f, 0.04f, 0.04f);
 	float VdotH = saturate(dot(V, H));
 	float3 F = F0 + (1 - F0) * pow(1 - VdotH, 5);
 
@@ -70,13 +79,13 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	float NdotH = saturate(dot(normal, H));
 	float D = pow(NdotH, shiny);
 	float NdotL = saturate(dot(normal, L));
-	float3 spec = D * F * NdotL * lightColor * vis;
+	float3 spec = D * F * NdotL * lightColor;
 
 	// diffuse
 	float3 diff = albedo * (NdotL / 3.14159) * lightColor;
 
 	float3 ambient = albedo * ambientColor;
 
-	//return float4(diff + spec + ambient, 1);
-	return float4(vis.xxx, 1);
+	return float4(albedoTexture.Sample(pointClamp, input.uv).rgb, 1);
+	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
 };

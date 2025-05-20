@@ -13,11 +13,11 @@ class LightingShader
 private:
 	struct MatrixBufferType
 	{
-		XMMATRIX invProj;
+		XMMATRIX invViewProj;
 	};
 	struct LightBufferType
 	{
-		XMMATRIX lightViewProjVS;
+		XMMATRIX lightViewProj;
 		XMFLOAT3 lightDirectionVS;
 		float pad0;
 		XMFLOAT3 lightColor;

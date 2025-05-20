@@ -136,7 +136,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
-	XMMATRIX lightProj = XMMatrixOrthographicLH(100.0f, 100.0f, 0.1f, 200.0f); // Adjust
+	XMMATRIX lightProj = XMMatrixOrthographicLH(0.5f, 0.5f, 0.001f, 20.0f); // Adjust
 
 	XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
 
@@ -144,9 +144,11 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	m_model->Render(m_deviceContext);
 
 	// GEOMETRY PASS
+	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightViewProj);
+
+	InitializeViewport(m_screenWidth, m_screenHeight);
 	m_geometryPass->UpdateShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix);
 	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
-	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightViewProj);
 
 	// LIGHTING PASS
 	ID3D11ShaderResourceView* gBuffer[] = {
@@ -162,16 +164,16 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	BeginScene();
 
 	// Update shader parameters
-
-	XMMATRIX viewMatrixInv= XMMatrixInverse(nullptr, viewMatrix);
+	XMMATRIX viewProj = XMMatrixMultiply(viewMatrix, m_projectionMatrix);
+	//XMMATRIX viewMatrixInv= XMMatrixInverse(nullptr, viewMatrix*m_projectionMatrix);
 	//XMMATRIX lightViewProjVS = m_shadowMatrix * lightProj * lightView * viewMatrixInv;
-	XMMATRIX lightViewProjVS = lightProj * lightView * viewMatrixInv;
+	//XMMATRIX lightViewProjVS = lightProj * lightView * viewMatrixInv;
 
 	XMVECTOR lightDirectionVecVS = XMVector3Normalize(XMVector3TransformNormal(lightDirectionVec, viewMatrix));
 	XMFLOAT3 lightDirectionVS;
 	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
-	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, lightViewProjVS, lightDirectionVS, lightColor, ambientColor, celThreshold);
+	m_lightingShader->SetShaderParameters(m_deviceContext, viewProj, lightViewProj, lightDirectionVS, lightColor, ambientColor, celThreshold);
 	InitializeViewport(m_screenWidth, m_screenHeight);
 	m_lightingShader->Render(m_deviceContext);
 
