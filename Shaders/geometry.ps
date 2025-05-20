@@ -14,7 +14,7 @@ struct PixelInputType
 {
 	float4 position : SV_POSITION;
 	float2 uv : TEXCOORD0;
-	float3 normal : NORMAL;
+	float3 normalVS : NORMAL;
 };
 
 struct PixelOutputType
@@ -29,9 +29,9 @@ PixelOutputType GeometryPixelShader(PixelInputType input) : SV_TARGET
     
     float3 texAlbedo = albedoTexture.Sample(albedoSampler, input.uv).rgb;
     float3 albedo = lerp(albedoColor, texAlbedo, useAlbedoTexture ? 1.0 : 0.0);
-	output.albedo = float4(albedo, 1);
+	output.albedo = float4(albedo, 1.0);
 
-    float3 normal = normalize(input.normal);
+    float3 normal = normalize(input.normalVS);
     normal = normal * 0.5f + 0.5f;
     output.normal = float4(normal, roughness);
 

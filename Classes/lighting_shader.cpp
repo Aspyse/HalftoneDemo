@@ -183,7 +183,7 @@ void LightingShader::Shutdown() // Consider splitting up
 	}
 }
 
-bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMFLOAT3 lightDirection, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
+bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX lightViewProjVS, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
 {
 	XMVECTOR det;
 	XMMATRIX invProj = XMMatrixInverse(&det, projectionMatrix);
@@ -194,7 +194,8 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 		return false;
 
 	MatrixBufferType* dataPtr = (MatrixBufferType*)mappedResource.pData;
-	dataPtr->invProj = invProj;
+
+	dataPtr->invProj = XMMatrixTranspose(invProj);
 
 	deviceContext->Unmap(m_matrixBuffer, 0);
 
@@ -202,21 +203,7 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 
 	deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
 
-	// Light cbuffer
 
-	XMVECTOR lightDirectionW = XMLoadFloat3(&lightDirection);
-	XMVECTOR lightDirectionWNorm = XMVector3Normalize(lightDirectionW);
-
-	XMVECTOR target = XMVectorZero();
-	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX lightView = XMMatrixLookToLH(lightDirectionW, -lightDirectionWNorm, up);
-
-	XMMATRIX lightProj = XMMatrixOrthographicLH(10.0f, 10.0f, 0.1f, 10.0f);
-	XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
-
-	XMVECTOR lightDirectionVS = XMVector3TransformNormal(lightDirectionWNorm, viewMatrix);
-	lightDirectionVS = XMVector3Normalize(lightDirectionVS);
-	DirectX::XMStoreFloat3(&lightDirection, lightDirectionVS);
 
 	result = deviceContext->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))
@@ -224,8 +211,8 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 
 	LightBufferType* dataPtr2 = (LightBufferType*)mappedResource.pData;
 
-	dataPtr2->lightViewProjVS = lightViewProj;
-	dataPtr2->lightDirectionVS = lightDirection;
+	dataPtr2->lightViewProjVS = XMMatrixTranspose(lightViewProjVS);
+	dataPtr2->lightDirectionVS = lightDirectionVS;
 	dataPtr2->lightColor = lightColor;
 	dataPtr2->ambientColor = ambientColor;
 

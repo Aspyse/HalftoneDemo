@@ -39,7 +39,7 @@ float ShadowVisibility(float3 viewPos)
 {
 	float4 posLS = mul(float4(viewPos, 1), lightViewProjVS);
 	float2 uv = posLS.xy / posLS.w * 0.5 + 0.5;
-	float depth = posLS.z / posLS.w - 0.002;
+	float depth = posLS.z / posLS.w;
 
 	return shadowMap.SampleCmpLevelZero(shadowSampler, uv, depth);
 }
@@ -48,7 +48,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 {
 	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
 	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
-	float3 normal = nr.rgb * 2 - 1;
+	float3 normal = normalize(nr.rgb * 2 - 1);
 	float rough = nr.a;
 
 	float3 viewPos = ReconstructViewPos(input.uv);
@@ -69,15 +69,14 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	// blinn-phong
 	float NdotH = saturate(dot(normal, H));
 	float D = pow(NdotH, shiny);
-
 	float NdotL = saturate(dot(normal, L));
 	float3 spec = D * F * NdotL * lightColor * vis;
 
 	// diffuse
-	float3 diff = albedo * (NdotL / 3.14159) * lightColor * vis;
+	float3 diff = albedo * (NdotL / 3.14159) * lightColor;
 
 	float3 ambient = albedo * ambientColor;
 
-	return float4(diff + spec + ambient, 1);
-	//return float4(1.0, 1.0, 0.0, 1.0);
+	//return float4(diff + spec + ambient, 1);
+	return float4(vis.xxx, 1);
 };

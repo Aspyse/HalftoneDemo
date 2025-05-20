@@ -1,6 +1,8 @@
-cbuffer CameraBuffer : register(b0)
+cbuffer MatrixBuffer : register(b0)
 {
-	float4x4 ViewProj;
+    float4x4 worldMatrix;
+    float4x4 viewMatrix;
+    float4x4 projectionMatrix;
 };
 
 struct VertexInputType
@@ -14,7 +16,7 @@ struct PixelInputType
 {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD0;
-    float3 normal : NORMAL;
+    float3 normalVS : NORMAL;
 };
 
 PixelInputType GeometryVertexShader(VertexInputType input)
@@ -23,9 +25,13 @@ PixelInputType GeometryVertexShader(VertexInputType input)
     
     input.position.w = 1.0f;
 
-    output.position = mul(input.position, ViewProj);
+    //output.position = mul(input.position, worldMatrix);
 
-    output.normal = input.normal;
+    output.position = mul(input.position, viewMatrix);
+    output.position = mul(output.position, projectionMatrix);
+
+    output.normalVS = normalize(mul(input.normal, (float3x3)viewMatrix));
+    //output.normal = input.normal;
 
     output.uv = input.uv;
 

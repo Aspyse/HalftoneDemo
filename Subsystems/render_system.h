@@ -81,4 +81,6 @@ private:
 	float m_clearColor[3] = { 0.9f, 1.0f, 1.0f };
 	float m_ambientStrength = 0.5f;
 	float m_celThreshold = 0.4f;
+
+	const XMMATRIX m_shadowMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.5f, 0.5f, 0.5f);
 };

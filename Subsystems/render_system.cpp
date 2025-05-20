@@ -43,6 +43,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
+
 	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	m_geometryPass->SetShaderParameters(m_deviceContext, albedoColor);
 
@@ -116,42 +117,63 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 		InitializeMatrices();
 	}
 
-	// Clear the buffers to begin the scene
-	BeginScene();
-
 	// Update camera
 	m_camera->Frame(inputHandle);
 
 	XMMATRIX viewMatrix;
 	m_camera->GetViewMatrix(viewMatrix);
 
+	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
+	float celThreshold = 0.0f;
+
+	// Set up light source
+	XMFLOAT3 lightColor = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
+	XMVECTOR lightDirectionVec = XMLoadFloat3(&lightDirection);
+
+	XMVECTOR target = XMVectorZero(); // TODO
+	XMVECTOR lightPos = target - lightDirectionVec;
+	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
+
+	XMMATRIX lightProj = XMMatrixOrthographicLH(100.0f, 100.0f, 0.1f, 200.0f); // Adjust
+
+	XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
+
 	// Update model
 	m_model->Render(m_deviceContext);
 
 	// GEOMETRY PASS
-	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	m_geometryPass->UpdateShaderParameters(m_deviceContext, viewMatrix, m_projectionMatrix, albedoColor);
-	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount());
+	m_geometryPass->UpdateShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix);
+	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
+	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightViewProj);
 
 	// LIGHTING PASS
-
-
-	/*ID3D11ShaderResourceView* gBuffer[] = {
+	ID3D11ShaderResourceView* gBuffer[] = {
 		m_geometryPass->GetGBuffer(0),
 		m_geometryPass->GetGBuffer(1),
 		m_geometryPass->GetGBuffer(2),
 		m_geometryPass->GetShadowMap()
-	};*/
-	//m_deviceContext->PSSetShaderResources(0, 4, gBuffer);
+	};
+
+	m_deviceContext->PSSetShaderResources(0, 4, gBuffer);
+
+	// Clear the buffers to begin the scene
+	BeginScene();
 
 	// Update shader parameters
-	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
 
-	XMFLOAT3 lightColor = XMFLOAT3(0.9f, 0.9f, 0.9f);
-	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
-	float celThreshold = 0.0f;
-	//m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, lightDirection, lightColor, ambientColor, celThreshold);
-	//m_lightingShader->Render(m_deviceContext);
+	XMMATRIX viewMatrixInv= XMMatrixInverse(nullptr, viewMatrix);
+	//XMMATRIX lightViewProjVS = m_shadowMatrix * lightProj * lightView * viewMatrixInv;
+	XMMATRIX lightViewProjVS = lightProj * lightView * viewMatrixInv;
+
+	XMVECTOR lightDirectionVecVS = XMVector3Normalize(XMVector3TransformNormal(lightDirectionVec, viewMatrix));
+	XMFLOAT3 lightDirectionVS;
+	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
+
+	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, lightViewProjVS, lightDirectionVS, lightColor, ambientColor, celThreshold);
+	InitializeViewport(m_screenWidth, m_screenHeight);
+	m_lightingShader->Render(m_deviceContext);
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -394,7 +416,7 @@ bool RenderSystem::CreateRasterState()
 	D3D11_RASTERIZER_DESC rd;
 	ZeroMemory(&rd, sizeof(rd));
 	rd.AntialiasedLineEnable = false;
-	rd.CullMode = D3D11_CULL_BACK;
+	rd.CullMode = D3D11_CULL_NONE;
 	rd.DepthBias = 0;
 	rd.DepthBiasClamp = 0.0f;
 	rd.DepthClipEnable = true;

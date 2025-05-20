@@ -9,9 +9,15 @@ using namespace DirectX;
 class GeometryPass
 {
 private:
+	struct ShadowBufferType
+	{
+		XMMATRIX lightViewProj;
+	};
 	struct CameraBufferType
 	{
-		XMMATRIX viewProj;
+		XMMATRIX worldMatrix;
+		XMMATRIX viewMatrix;
+		XMMATRIX projectionMatrix;
 	};
 	struct MaterialBufferType
 	{
@@ -31,8 +37,9 @@ public:
 	void Shutdown();
 
 	bool SetShaderParameters(ID3D11DeviceContext*, XMFLOAT3); // TODO: take in texture
-	bool UpdateShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMFLOAT3);
-	void Render(ID3D11DeviceContext*, int);
+	bool UpdateShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX);
+	void Render(ID3D11DeviceContext*, int, float*);
+	bool RenderShadow(ID3D11DeviceContext*, int, XMMATRIX);
 
 	ID3D11ShaderResourceView* GetGBuffer(UINT);
 	ID3D11ShaderResourceView* GetShadowMap();
@@ -46,14 +53,13 @@ private:
 	bool InitializeGBuffer(ID3D11Device*);
 
 	bool InitializeShadow(ID3D11Device*);
-	void RenderShadow(ID3D11DeviceContext*);
 
 private:
 	ID3D11VertexShader* m_vertexShader = nullptr;
 	ID3D11PixelShader* m_pixelShader = nullptr;
-	ID3D11InputLayout* m_layout = nullptr;
+	ID3D11InputLayout *m_layout = nullptr, * m_shadowLayout = nullptr;
 	ID3D11SamplerState* m_sampleStateWrap = nullptr;
-	ID3D11Buffer *m_cameraBuffer = nullptr, *m_materialBuffer = nullptr;
+	ID3D11Buffer *m_cameraBuffer = nullptr, *m_materialBuffer = nullptr, *m_shadowBuffer = nullptr;
 
 	ID3D11RenderTargetView *m_albedoRTV = nullptr, *m_normalRTV = nullptr;
 	ID3D11ShaderResourceView *m_albedoSRV = nullptr, *m_normalSRV = nullptr;
@@ -67,4 +73,5 @@ private:
 
 	UINT m_texWidth = 0, m_texHeight = 0;
 	UINT m_shadowMapSize = 1024;
+	D3D11_VIEWPORT m_shadowVp = {};
 };
