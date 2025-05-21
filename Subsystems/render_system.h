@@ -26,6 +26,7 @@ public:
 	float* ClearColor();
 	float& AmbientStrength();
 	float& CelThreshold();
+	float* AlbedoColor();
 	float& Roughness();
 
 	bool ResetModel(const char*);
@@ -83,6 +84,7 @@ private:
 	float m_ambientStrength = 0.5f;
 	float m_celThreshold = 0.4f;
 	float m_roughness = 0.16f;
+	float m_albedoColor[3] = { 1.0f, 0.25f, 0.0f };
 
 	const XMMATRIX m_shadowMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.5f, 0.5f, 0.5f);
 };

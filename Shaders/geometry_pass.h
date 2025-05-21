@@ -34,24 +34,23 @@ public:
 	~GeometryPass();
 
 	bool Initialize(ID3D11Device*, UINT, UINT);
+	bool InitializeGBuffer(ID3D11Device*, UINT, UINT);
 	void Shutdown();
 
 	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, float); // TODO: take in texture
 	void Render(ID3D11DeviceContext*, int, float*);
-	bool RenderShadow(ID3D11DeviceContext*, int, XMMATRIX);
+	bool RenderShadow(ID3D11DeviceContext*, int, XMVECTOR);
 
 	ID3D11ShaderResourceView* GetGBuffer(UINT);
 	ID3D11ShaderResourceView* GetShadowMap();
+	XMMATRIX GetLightViewProj();
 
 private:
 	bool CompileShader(ID3D11Device*);
 	bool InitializeSampler(ID3D11Device*);
+	bool InitializeShadow(ID3D11Device*);
 
 	void OutputShaderErrorMessage(ID3D10Blob*, WCHAR*);
-
-	bool InitializeGBuffer(ID3D11Device*);
-
-	bool InitializeShadow(ID3D11Device*);
 
 private:
 	ID3D11VertexShader* m_vertexShader = nullptr;
@@ -70,7 +69,7 @@ private:
 	ID3D11DepthStencilView* m_shadowDSV = nullptr;
 	ID3D11ShaderResourceView* m_shadowSRV = nullptr;
 
-	UINT m_texWidth = 0, m_texHeight = 0;
 	UINT m_shadowMapSize = 2048;
 	D3D11_VIEWPORT m_shadowVp = {};
+	XMMATRIX m_lightViewProj = {};
 };

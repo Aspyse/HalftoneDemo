@@ -34,7 +34,7 @@ public:
 
 	bool Initialize(ID3D11Device*, const wchar_t*);
 	void Shutdown();
-	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, XMFLOAT3, XMFLOAT3, float);
+	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, XMFLOAT3, float);
 	bool Render(ID3D11DeviceContext*);
 
 private:

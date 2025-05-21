@@ -70,11 +70,15 @@ bool GuiSystem::Frame(RenderSystem* renderSystem)
 		ImGui::Begin("Test Window");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 
+		ImGui::ColorEdit3("Albedo Color", renderSystem->AlbedoColor());
+		ImGui::DragFloat("Cel Threshold", &renderSystem->CelThreshold(), 0.002f, 0, 1);
+		ImGui::DragFloat("Roughness", &renderSystem->Roughness(), 0.002f, 0, 1);
+
+		ImGui::Separator();
+
 		ImGui::DragFloat3("Light Direction", renderSystem->LightDirection(), 0.004f);
 		ImGui::ColorEdit3("Clear Color", renderSystem->ClearColor());
 		ImGui::DragFloat("Ambient Strength", &renderSystem->AmbientStrength(), 0.002f, 0, 1);
-		ImGui::DragFloat("Cel Threshold", &renderSystem->CelThreshold(), 0.002f, 0, 1);
-		ImGui::DragFloat("Roughness", &renderSystem->Roughness(), 0.002f, 0, 1);
 
 		ImGui::Separator();
 

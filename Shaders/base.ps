@@ -32,11 +32,38 @@ struct PixelInputType
 float3 ReconstructViewPos(float2 uv)
 {
 	float depth = depthTexture.Sample(pointClamp, uv).r;
-	float4 clipPos = float4(uv * 2 - 1, depth, 1);
-	float4 viewPosH = mul(clipPos, invProj);
+	uv = uv * 2 - 1;
+	uv.y = -uv.y;
+	float4 clipPos = float4(uv, depth, 1);
 
-	//viewPosH.z = -0.30009002f / (viewPosH.z - 1.00030009f);
+	float4 viewPosH = mul(clipPos, invProj);
 	return viewPosH.xyz / viewPosH.w;
+}
+float ShadowVisibility(float3 worldPos)
+{
+	float4 lightPos = mul(float4(worldPos, 1), lightViewProj);
+
+	float3 uv = lightPos.xyz / lightPos.w;
+
+	//return float4(uv.z.xxx, 1);
+
+	float2 shadowMapUV = float2(0.5f + uv.x * 0.5f, 0.5f - uv.y * 0.5f);
+
+	//if (uv.x < -1 || uv.x > 1 || uv.y < -1 || uv.y > 1 || uv.z < 0 || uv.z > 1)
+		//return 1;
+
+	// Try with plain comparison first for debugging
+	const float bias = 0.0022f;
+    float depthFromShadowMap = shadowMap.Sample(pointClamp, shadowMapUV).r;
+    float currentDepth = lightPos.z - bias;
+
+	//return depthFromShadowMap-currentDepth;
+    
+    // Manual comparison - can help diagnose hardware PCF issues
+    return (currentDepth > depthFromShadowMap) ? 0.0f : 1.0f;
+
+
+	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z);
 }
 
 float4 LightPixelShader(PixelInputType input) : SV_TARGET
@@ -45,13 +72,33 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
 	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
 	float3 normal = normalize(nr.rgb * 2 - 1);
-	float rough = max(nr.a, 0.01);
+	float rough = max(nr.a, 0.05);
+	float alpha = rough * rough; // artist control
 
 	float3 viewPos = ReconstructViewPos(input.uv);
 	float3 V = normalize(-viewPos);
 	float3 L = normalize(-lightDirectionVS);
 	float3 H = normalize(V + L);
 
+	// DEBUG
+	//return float4(normal, 1.0);
+	//return float4(viewPos.rgb, 1);
+	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
+
+	// AMBIENT
+    float3 ambient = albedo * ambientColor;
+
+	float depth = depthTexture.Sample(pointClamp, input.uv).r;
+	const float clipDistance = 0.9f;
+	if (depth > clipDistance)
+		return float4(ambient,1);
+
+	// SHADOW MAPPING
+	float4 worldPos = mul(float4(viewPos,1), invView);
+	float vis = 1;
+	vis = ShadowVisibility(worldPos);
+
+	// COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory
 	float NdotL = saturate(dot(normal, L));
 	float NdotV = saturate(dot(normal, V));
 	float NdotH = saturate(dot(normal, H));
@@ -61,9 +108,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     float3 F0 = float3(0.04, 0.04, 0.04);
     float3 F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
 
-	// ggx
 	// ndf
-	float alpha = rough * rough;
     float alpha2 = alpha * alpha;
     float denomD = (NdotH * NdotH) * (alpha2 - 1.0) + 1.0;
     float D = alpha2 / (PI * denomD * denomD);
@@ -79,12 +124,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     // lambertian diffuse
     float3 diffuse = (1.0 - F) * albedo / PI;
 
-    float3 color = (diffuse + specular) * lightColor * NdotL;
+    float3 color = (diffuse + specular) * lightColor * NdotL * vis;
 
-    float3 ambient = albedo * ambientColor;
-
-    return float4(color + ambient, 1.0);
-	//return float4(normal, 1.0);
-	//return float4(viewPos.rgb, 1);
-	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
+	return float4(color + ambient, 1);
 };

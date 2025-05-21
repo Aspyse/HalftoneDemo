@@ -185,7 +185,7 @@ void LightingShader::Shutdown() // Consider splitting up
 	}
 }
 
-bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
+bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
 {
 	XMVECTOR det;
 	XMMATRIX invProj = XMMatrixInverse(&det, projectionMatrix);
@@ -208,6 +208,11 @@ bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMM
 	deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
 
 
+
+	// Update shader parameters
+	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirection, viewMatrix);
+	XMFLOAT3 lightDirectionVS;
+	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
 	result = deviceContext->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))

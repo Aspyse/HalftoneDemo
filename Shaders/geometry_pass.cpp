@@ -26,11 +26,13 @@ ID3D11ShaderResourceView* GeometryPass::GetShadowMap()
     return m_shadowSRV;
 }
 
+XMMATRIX GeometryPass::GetLightViewProj()
+{
+    return m_lightViewProj;
+}
+
 bool GeometryPass::Initialize(ID3D11Device* device, UINT width, UINT height)
 {
-    m_texWidth = width;
-    m_texHeight = height;
-
 	if (!CompileShader(device))
 		return false;
 
@@ -38,7 +40,7 @@ bool GeometryPass::Initialize(ID3D11Device* device, UINT width, UINT height)
     if (!InitializeSampler(device))
         return false;
 
-    if (!InitializeGBuffer(device))
+    if (!InitializeGBuffer(device, width, height))
         return false;
 
     if (!InitializeShadow(device))
@@ -178,12 +180,12 @@ bool GeometryPass::InitializeSampler(ID3D11Device* device)
     return true;
 }
 
-bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
+bool GeometryPass::InitializeGBuffer(ID3D11Device* device, UINT width, UINT height)
 {
     D3D11_TEXTURE2D_DESC td;
     ZeroMemory(&td, sizeof(td));
-    td.Width = m_texWidth;
-    td.Height = m_texHeight;
+    td.Width = width;
+    td.Height = height;
     td.MipLevels = 1;
     td.ArraySize = 1;
     td.SampleDesc.Count = 1;
@@ -222,12 +224,11 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
     normalTex->Release();
     normalTex = nullptr;
 
-
     // Create depth stencil texture
     D3D11_TEXTURE2D_DESC depthDesc;
     ZeroMemory(&depthDesc, sizeof(depthDesc));
-    depthDesc.Width = m_texWidth;
-    depthDesc.Height = m_texHeight;
+    depthDesc.Width = width;
+    depthDesc.Height = height;
     depthDesc.MipLevels = 1;
     depthDesc.ArraySize = 1;
     depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // Allows both depth-stencil and shader resource views
@@ -487,8 +488,18 @@ bool GeometryPass::InitializeShadow(ID3D11Device* device)
     return true;
 }
 
-bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX lightViewProj)
+bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCount, XMVECTOR lightDirection)
 {
+    // Set up light source
+    XMVECTOR target = XMVectorZero(); // TODO
+    XMVECTOR lightPos = target - lightDirection * 2.0f;
+    XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+    XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
+
+    XMMATRIX lightProj = XMMatrixOrthographicLH(0.8f, 0.8f, 0.03f, 5.0f); // Adjust
+
+    m_lightViewProj = XMMatrixMultiply(lightView, lightProj);
+    
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT result = deviceContext->Map(m_shadowBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(result))
@@ -496,7 +507,7 @@ bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCou
 
     ShadowBufferType* dataPtr = (ShadowBufferType*)mappedResource.pData;
 
-    dataPtr->lightViewProj = XMMatrixTranspose(lightViewProj);
+    dataPtr->lightViewProj = XMMatrixTranspose(m_lightViewProj);
 
     deviceContext->Unmap(m_shadowBuffer, 0);
 

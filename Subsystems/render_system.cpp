@@ -5,6 +5,63 @@ RenderSystem::RenderSystem() {};
 RenderSystem::RenderSystem(const RenderSystem&) {};
 RenderSystem::~RenderSystem() {};
 
+// MENU VALUES
+float* RenderSystem::LightDirection()
+{
+	return m_lightDirection;
+}
+
+float* RenderSystem::ClearColor()
+{
+	return m_clearColor;
+}
+
+float& RenderSystem::AmbientStrength()
+{
+	return m_ambientStrength;
+}
+
+float& RenderSystem::CelThreshold()
+{
+	return m_celThreshold;
+}
+
+float* RenderSystem::AlbedoColor()
+{
+	return m_albedoColor;
+}
+
+float& RenderSystem::Roughness()
+{
+	return m_roughness;
+}
+
+bool RenderSystem::ResetModel(const char* filename)
+{
+	ModelClass* temp_model = new ModelClass;
+	bool result = temp_model->Initialize(m_device, filename);
+	if (!result)
+	{
+		if (temp_model)
+		{
+			delete temp_model;
+			temp_model = nullptr;
+		}
+		return false;
+	}
+
+	if (m_model)
+	{
+		delete m_model;
+		m_model = nullptr;
+	}
+
+	m_model = temp_model;
+	return true;
+}
+
+
+
 bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 {
 	RECT rect;
@@ -98,15 +155,19 @@ void RenderSystem::Shutdown()
 bool RenderSystem::Render(InputSystem* inputHandle)
 {
 	// Input
-	m_screenWidth = inputHandle->GetResizeWidth();
-	m_screenHeight = inputHandle->GetResizeHeight();
+	//m_screenWidth = inputHandle->GetResizeWidth();
+	//m_screenHeight = inputHandle->GetResizeHeight();
 	
 	// Resize
-	if (m_screenWidth != 0 && m_screenHeight != 0)
+	if (m_screenWidth != inputHandle->GetResizeWidth() || m_screenHeight != inputHandle->GetResizeHeight())
 	{
+		m_screenWidth = inputHandle->GetResizeWidth();
+		m_screenHeight = inputHandle->GetResizeHeight();
+
 		CleanupRenderTarget();
 		CleanupDepthBuffer();
 		m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
+		m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
 		CreateRenderTarget();
 		CreateDepthBuffer();
 
@@ -123,29 +184,18 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
 	float celThreshold = 0.0f;
 
-	// Set up light source
-	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
-	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
-	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirection));
-
-	XMVECTOR target = XMVectorZero(); // TODO
-	XMVECTOR lightPos = target - lightDirectionVec*10.0f;
-	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
-
-	XMMATRIX lightProj = XMMatrixOrthographicLH(1.0f, 1.0f, 0.01f, 100.0f); // Adjust
-
-	XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
-
 	// Update model
 	m_model->Render(m_deviceContext);
 
 	// GEOMETRY PASS
-	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightViewProj);
+	XMFLOAT3 lightDirectionF = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
+	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirectionF));
+	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightDirectionVec);
 
 	InitializeViewport(m_screenWidth, m_screenHeight);
 	
-	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.25f, 0.0f);
+	//XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.25f, 0.0f);
+	XMFLOAT3 albedoColor = XMFLOAT3(m_albedoColor[0], m_albedoColor[1], m_albedoColor[2]);
 	m_geometryPass->SetShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix, albedoColor, m_roughness);
 	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
 
@@ -162,14 +212,8 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	// Clear the buffers to begin the scene
 	BeginScene();
 
-	// Update shader parameters
-	//XMMATRIX viewProj = XMMatrixMultiply(viewMatrix, m_projectionMatrix);
-
-	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirectionVec, viewMatrix);
-	XMFLOAT3 lightDirectionVS;
-	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
-
-	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, lightViewProj, lightDirectionVS, lightColor, ambientColor, celThreshold);
+	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
+	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, ambientColor, celThreshold);
 	InitializeViewport(m_screenWidth, m_screenHeight);
 	m_lightingShader->Render(m_deviceContext);
 
@@ -201,56 +245,6 @@ void RenderSystem::EndScene()
 	// Present
 	HRESULT hr = m_swapChain->Present(0, 0); // Without vsync
 	m_isSwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
-}
-
-// MENU VALUES
-float* RenderSystem::LightDirection()
-{
-	return m_lightDirection;
-}
-
-float* RenderSystem::ClearColor()
-{
-	return m_clearColor;
-}
-
-float& RenderSystem::AmbientStrength()
-{
-	return m_ambientStrength;
-}
-
-float& RenderSystem::CelThreshold()
-{
-	return m_celThreshold;
-}
-
-float& RenderSystem::Roughness()
-{
-	return m_roughness;
-}
-
-bool RenderSystem::ResetModel(const char* filename)
-{
-	ModelClass* temp_model = new ModelClass;
-	bool result = temp_model->Initialize(m_device, filename);
-	if (!result)
-	{
-		if (temp_model)
-		{
-			delete temp_model;
-			temp_model = nullptr;
-		}
-		return false;
-	}
-	
-	if (m_model)
-	{
-		delete m_model;
-		m_model = nullptr;
-	}
-
-	m_model = temp_model;
-	return true;
 }
 
 // HELPER FUNCTIONS
@@ -456,7 +450,7 @@ void RenderSystem::InitializeMatrices()
 	fieldOfView = 0.5f*(3.14159f / 4.0f);
 	screenAspect = (float)m_screenWidth / (float)m_screenHeight;
 	screenNear = 0.3f;
-	screenDepth = 1000.0f;
+	screenDepth = 100.0f; // ADJUST
 
 	m_projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
 
