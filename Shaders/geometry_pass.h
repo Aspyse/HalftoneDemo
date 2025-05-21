@@ -36,8 +36,7 @@ public:
 	bool Initialize(ID3D11Device*, UINT, UINT);
 	void Shutdown();
 
-	bool SetShaderParameters(ID3D11DeviceContext*, XMFLOAT3); // TODO: take in texture
-	bool UpdateShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX);
+	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3); // TODO: take in texture
 	void Render(ID3D11DeviceContext*, int, float*);
 	bool RenderShadow(ID3D11DeviceContext*, int, XMMATRIX);
 
@@ -72,6 +71,6 @@ private:
 	ID3D11ShaderResourceView* m_shadowSRV = nullptr;
 
 	UINT m_texWidth = 0, m_texHeight = 0;
-	UINT m_shadowMapSize = 1024;
+	UINT m_shadowMapSize = 2048;
 	D3D11_VIEWPORT m_shadowVp = {};
 };

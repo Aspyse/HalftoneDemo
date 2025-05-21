@@ -44,9 +44,6 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
-	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	m_geometryPass->SetShaderParameters(m_deviceContext, albedoColor);
-
 	m_lightingShader = new LightingShader;
 	m_lightingShader->Initialize(m_device, L"Shaders/base.ps");
 
@@ -127,7 +124,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	float celThreshold = 0.0f;
 
 	// Set up light source
-	XMFLOAT3 lightColor = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
 	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
 	XMVECTOR lightDirectionVec = XMLoadFloat3(&lightDirection);
 
@@ -136,7 +133,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
-	XMMATRIX lightProj = XMMatrixOrthographicLH(0.5f, 0.5f, 0.001f, 20.0f); // Adjust
+	XMMATRIX lightProj = XMMatrixOrthographicLH(1.0f, 1.0f, 0.01f, 100.0f); // Adjust
 
 	XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
 
@@ -147,7 +144,9 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightViewProj);
 
 	InitializeViewport(m_screenWidth, m_screenHeight);
-	m_geometryPass->UpdateShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix);
+	
+	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.25f, 0.0f);
+	m_geometryPass->SetShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix, albedoColor);
 	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
 
 	// LIGHTING PASS
@@ -169,11 +168,11 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	//XMMATRIX lightViewProjVS = m_shadowMatrix * lightProj * lightView * viewMatrixInv;
 	//XMMATRIX lightViewProjVS = lightProj * lightView * viewMatrixInv;
 
-	XMVECTOR lightDirectionVecVS = XMVector3Normalize(XMVector3TransformNormal(lightDirectionVec, viewMatrix));
+	XMVECTOR lightDirectionVecVS = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(lightDirectionVec), viewMatrix));
 	XMFLOAT3 lightDirectionVS;
 	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
-	m_lightingShader->SetShaderParameters(m_deviceContext, viewProj, lightViewProj, lightDirectionVS, lightColor, ambientColor, celThreshold);
+	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, lightViewProj, lightDirectionVS, lightColor, ambientColor, celThreshold);
 	InitializeViewport(m_screenWidth, m_screenHeight);
 	m_lightingShader->Render(m_deviceContext);
 

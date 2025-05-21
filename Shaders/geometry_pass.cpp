@@ -337,7 +337,7 @@ void GeometryPass::Shutdown()
     }
 }
 
-bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMFLOAT3 albedoColor)
+bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor)
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -345,24 +345,16 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMFLO
         return false;
 
     MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
-    dataPtr2->roughness = 0.95f;
+    dataPtr2->roughness = 0.4f;
     dataPtr2->useAlbedoTexture = false;
     dataPtr2->albedoColor = albedoColor;
 
     deviceContext->Unmap(m_materialBuffer, 0);
 
     UINT bufferNumber = 0;
-
     deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_materialBuffer);
-
-    return true;
-}
-
-
-bool GeometryPass::UpdateShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix)
-{
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    HRESULT result = deviceContext->Map(m_cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    
+    result = deviceContext->Map(m_cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(result))
         return false;
 
@@ -374,7 +366,7 @@ bool GeometryPass::UpdateShaderParameters(ID3D11DeviceContext* deviceContext, XM
 
     deviceContext->Unmap(m_cameraBuffer, 0);
 
-    UINT bufferNumber = 0;
+    bufferNumber = 0;
 
     deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_cameraBuffer);
 
