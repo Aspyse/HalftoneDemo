@@ -1,6 +1,7 @@
 #include "engine.h"
-#include "gui_system.h"
 #include "input_system.h"
+#include "gui_system.h"
+#include "render_system.h"
 
 Engine::Engine() {}
 Engine::Engine(const Engine& other) {}
@@ -10,33 +11,40 @@ bool Engine::Initialize()
 {
 	bool result;
 
-	input_system = new InputSystem;
-	input_system->Initialize();
+	m_inputSystem = new InputSystem;
+	m_inputSystem->Initialize();
 
-	gui_system = new GuiSystem;
-	gui_system->Initialize(input_system);
+	m_guiSystem = new GuiSystem;
+	m_guiSystem->Initialize(m_inputSystem);
 
-	//render_system = new RenderSystem;
-	//render_system->Initialize();
+	HWND hwnd = m_guiSystem->GetHWND();
+	WNDCLASSEXW wc = m_guiSystem->GetWC();
+
+	m_renderSystem = new RenderSystem;
+	m_renderSystem->Initialize(hwnd, wc);
 
 	return true; // TEMP
 }
 
 void Engine::Shutdown()
 {
-	if (gui_system)
+	if (m_renderSystem)
 	{
-		gui_system->Shutdown();
-		delete gui_system;
-		gui_system = nullptr;
+		m_renderSystem->Shutdown();
+		delete m_renderSystem;
+		m_renderSystem = nullptr;
 	}
-	if (input_system)
+	if (m_guiSystem)
 	{
-		delete input_system;
-		input_system = nullptr;
+		m_guiSystem->Shutdown();
+		delete m_guiSystem;
+		m_guiSystem = nullptr;
 	}
-
-	return;
+	if (m_inputSystem)
+	{
+		delete m_inputSystem;
+		m_inputSystem = nullptr;
+	}
 }
 
 void Engine::Run()
@@ -69,10 +77,14 @@ bool Engine::Frame()
 {
 	bool result;
 
-	if (input_system->IsKeyDown(VK_ESCAPE))
+	if (m_inputSystem->IsKeyDown(VK_ESCAPE))
 		return false;
 
-	result = gui_system->Frame();
+	result = m_guiSystem->Frame(m_renderSystem);
+	if (!result)
+		return false;
+
+	result = m_renderSystem->Render(m_inputSystem);
 	if (!result)
 		return false;
 

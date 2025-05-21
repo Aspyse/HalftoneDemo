@@ -13,6 +13,12 @@ public:
     void Initialize();
     bool IsKeyDown(UINT);
 
+    int GetScrollDelta();
+    bool IsMiddleMouseDown();
+    POINT GetMousePos();
+    UINT GetResizeWidth();
+    UINT GetResizeHeight();
+
     LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
 
 private:
@@ -20,5 +26,9 @@ private:
     void KeyUp(UINT);
 
 private:
-    bool keys[256] = { false };
+    bool m_keys[256] = { false };
+    bool m_isMiddleMouseDown = false;
+    POINT m_lastMousePos = { 0, 0 };
+    UINT m_resizeWidth = 0, m_resizeHeight = 0;
+    int m_scrollDelta = 0;
 };

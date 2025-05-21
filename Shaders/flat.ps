@@ -1,0 +1,31 @@
+cbuffer LightBuffer
+{
+	float4 ambientColor;
+	float4 lightColor;
+	float3 lightDirection;
+	float celThreshold;
+	float padding;
+};
+
+struct PixelInputType
+{
+	float4 position : SV_POSITION;
+	float3 normal : NORMAL;
+};
+
+float4 FlatPixelShader(PixelInputType input) : SV_TARGET
+{
+	float3 lightDir = normalize(lightDirection);
+	float3 normal = normalize(input.normal);
+
+	float lightIntensity = saturate(dot(normal, lightDir));
+
+	float4 color = ambientColor;
+
+	if (lightIntensity > celThreshold)
+		color += lightColor;
+
+	color = saturate(color);
+
+	return color;
+};
