@@ -26,6 +26,7 @@ public:
 	float* ClearColor();
 	float& AmbientStrength();
 	float& CelThreshold();
+	float& Roughness();
 
 	bool ResetModel(const char*);
 
@@ -77,10 +78,11 @@ private:
 	UINT m_screenWidth = 0, m_screenHeight = 0;
 
 	// Menu values
-	float m_lightDirection[3] = { 0.3f, 1.0f, -0.3f };
+	float m_lightDirection[3] = { 1.0f, -1.0f, 1.0f };
 	float m_clearColor[3] = { 0.9f, 1.0f, 1.0f };
 	float m_ambientStrength = 0.5f;
 	float m_celThreshold = 0.4f;
+	float m_roughness = 0.16f;
 
 	const XMMATRIX m_shadowMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.5f, 0.5f, 0.5f);
 };

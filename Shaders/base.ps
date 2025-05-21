@@ -39,76 +39,52 @@ float3 ReconstructViewPos(float2 uv)
 	return viewPosH.xyz / viewPosH.w;
 }
 
-float ShadowVisibility(float3 worldPos)
-{
-	float4 posLS = mul(float4(worldPos, 1), lightViewProj);
-	
-	float2 uv = posLS.xy;
-	uv /= posLS.w;
-	uv = uv * 0.5 + 0.5;
-	uv.y = 1 - uv.y;
-
-	if ((saturate(uv.x) == uv.x) && (saturate(uv.y) == uv.y))
-	{
-		float depthValue = shadowMap.Sample(pointClamp, uv).r;
-
-		float lightDepthValue = posLS.z/posLS.w;
-
-		return depthValue;
-
-		lightDepthValue = lightDepthValue - 0.0022f;
-
-		if (lightDepthValue < depthValue)
-			return 1;
-	}
-	return 0;
-
-	/*posLS.xyz /= posLS.w;
-	float2 uv = posLS.xy * 0.5 + 0.5;
-	uv.y = 1 - uv.y;
-
-	const float bias = 0.0022;
-	float depth = saturate(posLS.z - bias);
-
-	return shadowMap.SampleCmpLevelZero(shadowSampler, uv, depth);*/
-}
-
 float4 LightPixelShader(PixelInputType input) : SV_TARGET
 {
+	const float PI = 3.14159;
 	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
 	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
 	float3 normal = normalize(nr.rgb * 2 - 1);
-	float rough = nr.a;
+	float rough = max(nr.a, 0.01);
 
 	float3 viewPos = ReconstructViewPos(input.uv);
 	float3 V = normalize(-viewPos);
 	float3 L = normalize(-lightDirectionVS);
 	float3 H = normalize(V + L);
 
-	float4 worldPosH = mul(float4(viewPos, 1.0), invView);
-	float3 worldPos = worldPosH.xyz / worldPosH.w;
-
-	float vis = ShadowVisibility(worldPos);
-	vis = 1;
-
-	// Schlick Fresnel
-	const float F0 = 0.04f;
-	float VdotH = saturate(dot(V, H));
-	float3 F = F0 + (1 - F0) * pow(1 - VdotH, 5);
-
-	float shiny = lerp(2048.0, 16.0, rough*rough);
-
-	// blinn-phong
 	float NdotL = saturate(dot(normal, L));
+	float NdotV = saturate(dot(normal, V));
 	float NdotH = saturate(dot(normal, H));
-	float D = pow(NdotH, shiny);
-	float3 spec = D * F * NdotL * lightColor * vis;
+	float VdotH = saturate(dot(V, H));
 
-	// diffuse
-	float3 diff = albedo * (NdotL / 3.14159) * lightColor * vis;
+	// schlick fresnel
+    float3 F0 = float3(0.04, 0.04, 0.04);
+    float3 F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
 
-	float3 ambient = albedo * ambientColor;
+	// ggx
+	// ndf
+	float alpha = rough * rough;
+    float alpha2 = alpha * alpha;
+    float denomD = (NdotH * NdotH) * (alpha2 - 1.0) + 1.0;
+    float D = alpha2 / (PI * denomD * denomD);
 
-	return float4(diff + spec + ambient, 1);
+    // geometry function
+    float k = (alpha + 1.0) * (alpha + 1.0) / 8.0;
+    float G_V = NdotV / (NdotV * (1.0 - k) + k);
+    float G_L = NdotL / (NdotL * (1.0 - k) + k);
+    float G = G_V * G_L;
+
+    float3 specular = (D * G * F) / (4.0 * NdotV * NdotL + 0.001);
+
+    // lambertian diffuse
+    float3 diffuse = (1.0 - F) * albedo / PI;
+
+    float3 color = (diffuse + specular) * lightColor * NdotL;
+
+    float3 ambient = albedo * ambientColor;
+
+    return float4(color + ambient, 1.0);
+	//return float4(normal, 1.0);
+	//return float4(viewPos.rgb, 1);
 	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
 };

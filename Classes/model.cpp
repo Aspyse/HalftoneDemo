@@ -55,15 +55,54 @@ bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const cha
 		return false;
 
 	CalculateNormals(outVertices, outIndices);
+	CalculateUVs(outVertices, outIndices);
 
 	return true;
 }
 
-bool ModelClass::CalculateNormals(VertexType*& outVertices, ULONG* indices)
+bool ModelClass::CalculateNormals(VertexType* vertices, ULONG* indices)
 {
-	// Clear all normals to zero first
-	for (size_t i = 0; i < m_vertexCount; ++i)
-		outVertices[i].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	// Initialize all normals to zero
+	for (ULONG i = 0; i < m_vertexCount; ++i)
+	{
+		vertices[i].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	}
+
+	// Calculate normals for each face and add them to associated vertices
+	/*for (ULONG i = 0; i < m_indexCount; i += 3)
+	{
+		ULONG i0 = indices[i];
+		ULONG i1 = indices[i+1];
+		ULONG i2 = indices[i+2];
+		// THANKS POITA FROM DEVMASTER 2010
+		XMVECTOR v[3] = {
+			XMLoadFloat3(&vertices[i0].position),
+			XMLoadFloat3(&vertices[i1].position),
+			XMLoadFloat3(&vertices[i2].position)
+		};
+
+		// Calculate the cross product to get the normal vector
+		XMVECTOR normal = XMVector3Cross(v[1]-v[0], v[1]-v[2]);
+
+		// Store the normal temporarily
+		XMFLOAT3 faceNormal;
+		XMStoreFloat3(&faceNormal, normal);
+
+		for (int j = 0; j < 3; ++j)
+		{
+			XMVECTOR a = v[(j + 1) % 3] - v[j];
+			XMVECTOR b = v[(j + 2) % 3] - v[j];
+
+			float dot = XMVectorGetX(XMVector3Dot(a, b));
+			float lenA = XMVectorGetX(XMVector3Length(a));
+			float lenB = XMVectorGetX(XMVector3Length(b));
+			float weight = acos(dot / (lenA * lenB));
+
+			XMVECTOR current = XMLoadFloat3(&vertices[indices[i + j]].normal);
+			current += weight * normal;
+			XMStoreFloat3(&vertices[indices[i + j]].normal, current);
+		}
+	}*/
 
 	// Loop over each triangle
 	for (size_t i = 0; i < m_indexCount; i += 3) {
@@ -71,9 +110,9 @@ bool ModelClass::CalculateNormals(VertexType*& outVertices, ULONG* indices)
 		ULONG i1 = indices[i + 1];
 		ULONG i2 = indices[i + 2];
 
-		XMVECTOR v0 = XMLoadFloat3(&outVertices[i0].position);
-		XMVECTOR v1 = XMLoadFloat3(&outVertices[i1].position);
-		XMVECTOR v2 = XMLoadFloat3(&outVertices[i2].position);
+		XMVECTOR v0 = XMLoadFloat3(&vertices[i0].position);
+		XMVECTOR v1 = XMLoadFloat3(&vertices[i1].position);
+		XMVECTOR v2 = XMLoadFloat3(&vertices[i2].position);
 
 		// Calculate the two edge vectors
 		XMVECTOR edge1 = XMVectorSubtract(v1, v0);
@@ -85,18 +124,26 @@ bool ModelClass::CalculateNormals(VertexType*& outVertices, ULONG* indices)
 
 		// Accumulate the face normal into each vertex's normal
 		for (ULONG idx : { i0, i1, i2 }) {
-			XMVECTOR n = XMLoadFloat3(&outVertices[idx].normal);
+			XMVECTOR n = XMLoadFloat3(&vertices[idx].normal);
 			n = XMVectorAdd(n, faceNormal);
-			XMStoreFloat3(&outVertices[idx].normal, n);
+			XMStoreFloat3(&vertices[idx].normal, n);
 		}
 	}
 
-	// Normalize all accumulated normals
-	for (size_t i = 0; i < m_vertexCount; ++i) {
-		XMVECTOR n = XMLoadFloat3(&outVertices[i].normal);
-		n = XMVector3Normalize(n);
-		XMStoreFloat3(&outVertices[i].normal, n);
+	// Normalize the accumulated normals for each vertex
+	for (ULONG i = 0; i < m_vertexCount; ++i)
+	{
+		XMVECTOR normal = XMLoadFloat3(&vertices[i].normal);
+		normal = XMVector3Normalize(normal);
+		XMStoreFloat3(&vertices[i].normal, normal);
 	}
+
+	return true;
+}
+
+bool ModelClass::CalculateUVs(VertexType* vertices, ULONG* indices) {
+	for (UINT i = 0; i < m_vertexCount; ++i)
+		vertices[i].uv = XMFLOAT2(0.0f, 0.0f);
 
 	return true;
 }

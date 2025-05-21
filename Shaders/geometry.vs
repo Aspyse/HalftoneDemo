@@ -25,13 +25,11 @@ PixelInputType GeometryVertexShader(VertexInputType input)
     
     input.position.w = 1.0f;
 
-    //output.position = mul(input.position, worldMatrix);
-
-    output.position = mul(input.position, viewMatrix);
+    output.position = mul(input.position, worldMatrix);
+    output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
 
     output.normal = normalize(mul(input.normal, (float3x3)viewMatrix));
-    //output.normal = input.normal;
 
     output.uv = input.uv;
 

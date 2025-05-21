@@ -74,6 +74,7 @@ bool GuiSystem::Frame(RenderSystem* renderSystem)
 		ImGui::ColorEdit3("Clear Color", renderSystem->ClearColor());
 		ImGui::DragFloat("Ambient Strength", &renderSystem->AmbientStrength(), 0.002f, 0, 1);
 		ImGui::DragFloat("Cel Threshold", &renderSystem->CelThreshold(), 0.002f, 0, 1);
+		ImGui::DragFloat("Roughness", &renderSystem->Roughness(), 0.002f, 0, 1);
 
 		ImGui::Separator();
 

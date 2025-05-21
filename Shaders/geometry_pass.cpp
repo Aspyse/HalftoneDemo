@@ -198,7 +198,7 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device)
         return false;
 
     // Normal + Roughness render target
-    td.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+    td.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     ID3D11Texture2D* normalTex = nullptr;
     result = device->CreateTexture2D(&td, nullptr, &normalTex);
     if (FAILED(result))
@@ -337,7 +337,7 @@ void GeometryPass::Shutdown()
     }
 }
 
-bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor)
+bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness)
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -345,7 +345,7 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
         return false;
 
     MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
-    dataPtr2->roughness = 0.4f;
+    dataPtr2->roughness = roughness;
     dataPtr2->useAlbedoTexture = false;
     dataPtr2->albedoColor = albedoColor;
 
@@ -360,7 +360,7 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 
     CameraBufferType* dataPtr = (CameraBufferType*)mappedResource.pData;
 
-    dataPtr->worldMatrix = XMMatrixTranspose(worldMatrix);
+    dataPtr->worldMatrix = XMMatrixIdentity();
     dataPtr->viewMatrix = XMMatrixTranspose(viewMatrix);
     dataPtr->projectionMatrix = XMMatrixTranspose(projectionMatrix);
 

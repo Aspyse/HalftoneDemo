@@ -10,6 +10,7 @@ private:
 	struct VertexType
 	{
 		XMFLOAT3 position;
+		XMFLOAT2 uv;
 		XMFLOAT3 normal;
 	};
 
@@ -26,7 +27,8 @@ public:
 
 private:
 	bool LoadPLY(VertexType*&, ULONG*&, const char*);
-	bool CalculateNormals(VertexType*&, ULONG*);
+	bool CalculateNormals(VertexType*, ULONG*);
+	bool CalculateUVs(VertexType*, ULONG*);
 
 private:
 	ID3D11Buffer *m_vertexBuffer = nullptr, *m_indexBuffer = nullptr;

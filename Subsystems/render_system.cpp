@@ -126,10 +126,10 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	// Set up light source
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
 	XMFLOAT3 lightDirection = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
-	XMVECTOR lightDirectionVec = XMLoadFloat3(&lightDirection);
+	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirection));
 
 	XMVECTOR target = XMVectorZero(); // TODO
-	XMVECTOR lightPos = target - lightDirectionVec;
+	XMVECTOR lightPos = target - lightDirectionVec*10.0f;
 	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
@@ -146,7 +146,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	InitializeViewport(m_screenWidth, m_screenHeight);
 	
 	XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.25f, 0.0f);
-	m_geometryPass->SetShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix, albedoColor);
+	m_geometryPass->SetShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix, albedoColor, m_roughness);
 	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
 
 	// LIGHTING PASS
@@ -163,12 +163,9 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	BeginScene();
 
 	// Update shader parameters
-	XMMATRIX viewProj = XMMatrixMultiply(viewMatrix, m_projectionMatrix);
-	//XMMATRIX viewMatrixInv= XMMatrixInverse(nullptr, viewMatrix*m_projectionMatrix);
-	//XMMATRIX lightViewProjVS = m_shadowMatrix * lightProj * lightView * viewMatrixInv;
-	//XMMATRIX lightViewProjVS = lightProj * lightView * viewMatrixInv;
+	//XMMATRIX viewProj = XMMatrixMultiply(viewMatrix, m_projectionMatrix);
 
-	XMVECTOR lightDirectionVecVS = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(lightDirectionVec), viewMatrix));
+	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirectionVec, viewMatrix);
 	XMFLOAT3 lightDirectionVS;
 	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
@@ -225,6 +222,11 @@ float& RenderSystem::AmbientStrength()
 float& RenderSystem::CelThreshold()
 {
 	return m_celThreshold;
+}
+
+float& RenderSystem::Roughness()
+{
+	return m_roughness;
 }
 
 bool RenderSystem::ResetModel(const char* filename)
@@ -417,7 +419,7 @@ bool RenderSystem::CreateRasterState()
 	D3D11_RASTERIZER_DESC rd;
 	ZeroMemory(&rd, sizeof(rd));
 	rd.AntialiasedLineEnable = false;
-	rd.CullMode = D3D11_CULL_NONE;
+	rd.CullMode = D3D11_CULL_BACK;
 	rd.DepthBias = 0;
 	rd.DepthBiasClamp = 0.0f;
 	rd.DepthClipEnable = true;
