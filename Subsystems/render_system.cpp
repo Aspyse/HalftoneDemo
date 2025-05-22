@@ -203,7 +203,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	ClearRenderTargets();
 
 
-
+	
 	// LIGHTING PASS
 	ID3D11ShaderResourceView* gBuffer[] = {
 		m_geometryPass->GetGBuffer(0),
@@ -216,6 +216,8 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 
 	ID3D11RenderTargetView* rtv = m_halftoneRT->GetTarget();
 	m_deviceContext->OMSetRenderTargets(1, &rtv, nullptr);
+	//BeginScene();
+	//ResetViewport(m_screenWidth, m_screenHeight);
 	ResetViewport(m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
 
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
@@ -226,7 +228,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	ClearRenderTargets();
 
 	
-
+	
 	// POST-PROCESS (HALFTONE)
 	ID3D11ShaderResourceView* srv = m_halftoneRT->GetResource();
 	m_deviceContext->PSSetShaderResources(0, 1, &srv);
@@ -237,7 +239,7 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 
 	m_halftoneShader->SetShaderParameters(m_deviceContext, m_halftoneDotSize);
 	m_halftoneShader->Render(m_deviceContext); 
-
+	
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI

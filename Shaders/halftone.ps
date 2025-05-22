@@ -27,6 +27,9 @@ float4 HalftonePixelShader(PixelInputType input) : SV_Target
 	float2 delta = centerPos - pixelPos;
 	float pixelDist = length(delta);
 	pixelDist = pixelDist/0.71;
+	
+	/*float pixelDist = dot(delta, delta);
+	pixelDist = pixelDist/0.5;*/
 
 	float4 baseColor = inputTexture.Sample(samplerState, uv);
 	float4 cmy = 1.0 - baseColor;

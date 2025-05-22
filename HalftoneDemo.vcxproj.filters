@@ -84,6 +84,9 @@
     <ClCompile Include="Shaders\geometry_pass.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="Shaders\halftone_shader.cpp">
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine.h">
@@ -138,6 +141,9 @@
       <Filter>Source Files\Classes</Filter>
     </ClInclude>
     <ClInclude Include="Shaders\geometry_pass.h">
+      <Filter>Source Files\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\halftone_shader.h">
       <Filter>Source Files\Shaders</Filter>
     </ClInclude>
   </ItemGroup>

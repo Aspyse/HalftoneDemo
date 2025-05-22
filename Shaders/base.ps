@@ -61,7 +61,7 @@ float ShadowVisibility(float3 worldPos)
     //return (currentDepth > depthFromShadowMap) ? 0.0f : 1.0f;
 
 
-	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z);
+	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z - bias);
 }
 
 float4 LightPixelShader(PixelInputType input) : SV_TARGET
