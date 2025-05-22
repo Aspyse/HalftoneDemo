@@ -32,6 +32,7 @@ float4 HalftonePixelShader(PixelInputType input) : SV_Target
 	float4 cmy = 1.0 - baseColor;
 
 	float4 brightness = (pixelDist >= cmy) ? 1 : 0;
+	//float4 brightness = (pixelDist >= baseColor) ? 0 : 1;
 
 	return float4(brightness.rgb,1);
 	return float4(cmy.b, cmy.b, 0, 1);
