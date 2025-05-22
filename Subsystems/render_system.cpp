@@ -105,7 +105,8 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_lightingShader->Initialize(m_device, L"Shaders/base.ps");
 
 	m_halftoneRT = new RenderTexture;
-	m_halftoneRT->Initialize(m_device, m_screenWidth/m_halftoneDotSize, m_screenHeight/m_halftoneDotSize);
+	//m_halftoneRT->Initialize(m_device, m_screenWidth/m_halftoneDotSize, m_screenHeight/m_halftoneDotSize);
+	m_halftoneRT->Initialize(m_device, m_screenWidth, m_screenHeight);
 
 	m_halftoneShader = new HalftoneShader;
 	m_halftoneShader->Initialize(m_device, L"Shaders/halftone.ps", "HalftonePixelShader");
@@ -175,7 +176,8 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 
 		ResetViewport(m_screenWidth, m_screenHeight);
 		InitializeMatrices();
-		m_halftoneRT->Initialize(m_device, m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
+		//m_halftoneRT->Initialize(m_device, m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
+		m_halftoneRT->Initialize(m_device, m_screenWidth, m_screenHeight);
 	}
 
 	// Update camera
@@ -217,8 +219,8 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	ID3D11RenderTargetView* rtv = m_halftoneRT->GetTarget();
 	m_deviceContext->OMSetRenderTargets(1, &rtv, nullptr);
 	//BeginScene();
-	//ResetViewport(m_screenWidth, m_screenHeight);
-	ResetViewport(m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
+	ResetViewport(m_screenWidth, m_screenHeight);
+	//ResetViewport(m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
 
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
 	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
