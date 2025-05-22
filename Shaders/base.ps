@@ -56,11 +56,9 @@ float ShadowVisibility(float3 worldPos)
 	const float bias = 0.0022f;
     float depthFromShadowMap = shadowMap.Sample(pointClamp, shadowMapUV).r;
     float currentDepth = lightPos.z - bias;
-
-	//return depthFromShadowMap-currentDepth;
     
     // Manual comparison - can help diagnose hardware PCF issues
-    return (currentDepth > depthFromShadowMap) ? 0.0f : 1.0f;
+    //return (currentDepth > depthFromShadowMap) ? 0.0f : 1.0f;
 
 
 	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z);
@@ -89,7 +87,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     float3 ambient = albedo * ambientColor;
 
 	float depth = depthTexture.Sample(pointClamp, input.uv).r;
-	const float clipDistance = 0.9f;
+	const float clipDistance = 0.95f;
 	if (depth > clipDistance)
 		return float4(ambient,1);
 

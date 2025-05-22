@@ -1,15 +1,38 @@
 Texture2D inputTexture : register(t0);
 SamplerState samplerState : register(s0);
 
-struct HalftoneInput
+cbuffer HalftoneBuffer : register(b0)
 {
-	float4 position : SV_POSITION;
-	float2 texCoord : TEXCOORD0;
+	float dotSize;
 };
 
-float4 HalftonePixelShader(HalftoneInput input) : SV_Target
+struct PixelInputType
 {
-	float4 color = inputTexture.Sample(samplerState, input.texCoord);
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};
 
-	return color;
+float4 HalftonePixelShader(PixelInputType input) : SV_Target
+{
+	float2 textureSize;
+	inputTexture.GetDimensions(textureSize.x, textureSize.y);
+
+	float2 uv = (floor(input.uv * textureSize) + 0.5f) / textureSize;
+
+	float radius = dotSize/2;
+
+	float2 pixelPos = input.uv * textureSize;
+	float2 centerPos = floor(pixelPos) + 0.5f;
+
+	float2 delta = centerPos - pixelPos;
+	float pixelDist = length(delta);
+	pixelDist = pixelDist/0.71;
+
+	float4 baseColor = inputTexture.Sample(samplerState, uv);
+	float4 cmy = 1.0 - baseColor;
+
+	float4 brightness = (pixelDist >= cmy) ? 1 : 0;
+
+	return float4(brightness.rgb,1);
+	return float4(cmy.b, cmy.b, 0, 1);
 }

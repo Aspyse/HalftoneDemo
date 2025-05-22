@@ -71,7 +71,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_screenHeight = rect.bottom - rect.top;
 
 	// Initialize Direct3D
-	if (!CreateDeviceD3D(hwnd))
+	if (!InitializeDeviceD3D(hwnd))
 	{
 		CleanupDeviceD3D();
 		::UnregisterClassW(wc.lpszClassName, wc.hInstance);
@@ -81,13 +81,13 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	ImGui_ImplDX11_Init(m_device, m_deviceContext);
 
 	CreateRenderTarget();
-	CreateDepthStencilState();
+	InitializeDepthStencilState();
 	CreateDepthBuffer();
 
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
-	CreateRasterState();
-	InitializeViewport(m_screenWidth, m_screenHeight);
+	InitializeRaster();
+	ResetViewport(m_screenWidth, m_screenHeight);
 	InitializeMatrices();
 
 	m_camera = new CameraClass;
@@ -96,13 +96,19 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);
 	
 	m_model = new ModelClass;
-	m_model->Initialize(m_device, "Models/dragon_vrip.ply"); // TODO: Handle failure
+	m_model->Initialize(m_device, "Models/bun_zipper.ply"); // TODO: Handle failure
 	
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
 	m_lightingShader = new LightingShader;
 	m_lightingShader->Initialize(m_device, L"Shaders/base.ps");
+
+	m_halftoneRT = new RenderTexture;
+	m_halftoneRT->Initialize(m_device, m_screenWidth/m_halftoneDotSize, m_screenHeight/m_halftoneDotSize);
+
+	m_halftoneShader = new HalftoneShader;
+	m_halftoneShader->Initialize(m_device, L"Shaders/halftone.ps", "HalftonePixelShader");
 
 	return true;
 }
@@ -154,10 +160,6 @@ void RenderSystem::Shutdown()
 
 bool RenderSystem::Render(InputSystem* inputHandle)
 {
-	// Input
-	//m_screenWidth = inputHandle->GetResizeWidth();
-	//m_screenHeight = inputHandle->GetResizeHeight();
-	
 	// Resize
 	if (m_screenWidth != inputHandle->GetResizeWidth() || m_screenHeight != inputHandle->GetResizeHeight())
 	{
@@ -171,8 +173,9 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 		CreateRenderTarget();
 		CreateDepthBuffer();
 
-		InitializeViewport(m_screenWidth, m_screenHeight);
+		ResetViewport(m_screenWidth, m_screenHeight);
 		InitializeMatrices();
+		m_halftoneRT->Initialize(m_device, m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
 	}
 
 	// Update camera
@@ -181,23 +184,25 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	XMMATRIX viewMatrix;
 	m_camera->GetViewMatrix(viewMatrix);
 
-	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
-	float celThreshold = 0.0f;
-
 	// Update model
 	m_model->Render(m_deviceContext);
+
+
 
 	// GEOMETRY PASS
 	XMFLOAT3 lightDirectionF = XMFLOAT3(m_lightDirection[0], m_lightDirection[1], m_lightDirection[2]);
 	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirectionF));
 	m_geometryPass->RenderShadow(m_deviceContext, m_model->GetIndexCount(), lightDirectionVec);
 
-	InitializeViewport(m_screenWidth, m_screenHeight);
+	// Reset after viewport is set to shadowmap size
+	ResetViewport(m_screenWidth, m_screenHeight);
 	
-	//XMFLOAT3 albedoColor = XMFLOAT3(1.0f, 0.25f, 0.0f);
 	XMFLOAT3 albedoColor = XMFLOAT3(m_albedoColor[0], m_albedoColor[1], m_albedoColor[2]);
 	m_geometryPass->SetShaderParameters(m_deviceContext, m_worldMatrix, viewMatrix, m_projectionMatrix, albedoColor, m_roughness);
 	m_geometryPass->Render(m_deviceContext, m_model->GetIndexCount(), m_clearColor);
+	ClearRenderTargets();
+
+
 
 	// LIGHTING PASS
 	ID3D11ShaderResourceView* gBuffer[] = {
@@ -209,13 +214,30 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 
 	m_deviceContext->PSSetShaderResources(0, 4, gBuffer);
 
-	// Clear the buffers to begin the scene
-	BeginScene();
+	ID3D11RenderTargetView* rtv = m_halftoneRT->GetTarget();
+	m_deviceContext->OMSetRenderTargets(1, &rtv, nullptr);
+	ResetViewport(m_screenWidth / m_halftoneDotSize, m_screenHeight / m_halftoneDotSize);
 
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
+	XMFLOAT3 ambientColor = XMFLOAT3(m_clearColor[0] * m_ambientStrength, m_clearColor[1] * m_ambientStrength, m_clearColor[2] * m_ambientStrength);
+	float celThreshold = 0.0f;
 	m_lightingShader->SetShaderParameters(m_deviceContext, m_projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, ambientColor, celThreshold);
-	InitializeViewport(m_screenWidth, m_screenHeight);
 	m_lightingShader->Render(m_deviceContext);
+	ClearRenderTargets();
+
+	
+
+	// POST-PROCESS (HALFTONE)
+	ID3D11ShaderResourceView* srv = m_halftoneRT->GetResource();
+	m_deviceContext->PSSetShaderResources(0, 1, &srv);
+
+	// Clear the buffers to begin the scene
+	BeginScene();
+	ResetViewport(m_screenWidth, m_screenHeight);
+
+	m_halftoneShader->SetShaderParameters(m_deviceContext, m_halftoneDotSize);
+	m_halftoneShader->Render(m_deviceContext); 
+
 
 	// Render GUI
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
@@ -223,6 +245,12 @@ bool RenderSystem::Render(InputSystem* inputHandle)
 	// Present the rendered scene to the screen
 	EndScene();
 	return true; // TEMP
+}
+
+void RenderSystem::ClearRenderTargets()
+{
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 }
 
 void RenderSystem::BeginScene()
@@ -248,7 +276,7 @@ void RenderSystem::EndScene()
 }
 
 // HELPER FUNCTIONS
-bool RenderSystem::CreateDeviceD3D(HWND hWnd)
+bool RenderSystem::InitializeDeviceD3D(HWND hWnd)
 {
 	// Setup swap chain
 	DXGI_SWAP_CHAIN_DESC sd;
@@ -331,7 +359,7 @@ void RenderSystem::CleanupRenderTarget()
 	}
 }
 
-bool RenderSystem::CreateDepthStencilState()
+bool RenderSystem::InitializeDepthStencilState()
 {
 	D3D11_DEPTH_STENCIL_DESC dsd;
 	ZeroMemory(&dsd, sizeof(dsd));
@@ -408,7 +436,7 @@ void RenderSystem::CleanupDepthBuffer()
 	}
 }
 
-bool RenderSystem::CreateRasterState()
+bool RenderSystem::InitializeRaster()
 {
 	D3D11_RASTERIZER_DESC rd;
 	ZeroMemory(&rd, sizeof(rd));
@@ -431,18 +459,6 @@ bool RenderSystem::CreateRasterState()
 	return true;
 }
 
-void RenderSystem::InitializeViewport(float width, float height)
-{
-	m_viewport.Width = static_cast<FLOAT>(width);
-	m_viewport.Height = static_cast<FLOAT>(height);
-	m_viewport.MinDepth = 0.0f;
-	m_viewport.MaxDepth = 1.0f;
-	m_viewport.TopLeftX = 0.0f;
-	m_viewport.TopLeftY = 0.0f;
-
-	m_deviceContext->RSSetViewports(1, &m_viewport);
-}
-
 void RenderSystem::InitializeMatrices()
 {
 	// TODO: consider moving to CameraClass
@@ -459,12 +475,19 @@ void RenderSystem::InitializeMatrices()
 	m_orthoMatrix = XMMatrixOrthographicLH((float)m_screenWidth, (float)m_screenHeight, screenNear, screenDepth);
 }
 
+void RenderSystem::ResetViewport(float width, float height)
+{
+	m_viewport.Width = static_cast<FLOAT>(width);
+	m_viewport.Height = static_cast<FLOAT>(height);
+	m_viewport.MinDepth = 0.0f;
+	m_viewport.MaxDepth = 1.0f;
+	m_viewport.TopLeftX = 0.0f;
+	m_viewport.TopLeftY = 0.0f;
+
+	m_deviceContext->RSSetViewports(1, &m_viewport);
+}
+
 void RenderSystem::SetBackBufferRenderTarget()
 {
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
-}
-
-void RenderSystem::ResetViewport()
-{
-	m_deviceContext->RSSetViewports(1, &m_viewport);
 }

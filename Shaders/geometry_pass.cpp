@@ -378,6 +378,7 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount, float* clearColor)
 {
     // Clear the render target views
+    //float clearColor[4] = { 0, 0, 0, 0 };
     deviceContext->ClearRenderTargetView(m_albedoRTV, clearColor);
     deviceContext->ClearRenderTargetView(m_normalRTV, clearColor);
 
@@ -396,9 +397,6 @@ void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount, fl
 	deviceContext->PSSetSamplers(0, 1, &m_sampleStateWrap);
 
 	deviceContext->DrawIndexed(indexCount, 0, 0);
-
-    ID3D11RenderTargetView* nullRTVs[2] = { nullptr, nullptr };
-    deviceContext->OMSetRenderTargets(2, nullRTVs, nullptr);
 }
 
 
