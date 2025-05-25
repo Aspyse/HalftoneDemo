@@ -13,17 +13,11 @@ public:
 	GuiSystem(const GuiSystem&);
 	~GuiSystem();
 
-	bool Initialize(InputSystem*);
+	bool Initialize(HWND);
 	void Shutdown();
-	bool Frame(RenderSystem*);
-
-	WNDCLASSEXW GetWC();
-	HWND GetHWND();
+	bool Frame(RenderParameters);
 
 private:
-	WNDCLASSEXW m_wc;
-	HWND m_hwnd = nullptr;
-
 	ImGuiIO* m_io = nullptr;
 	RenderSystem* m_renderSystem = nullptr;
 };

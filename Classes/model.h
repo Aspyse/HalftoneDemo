@@ -2,7 +2,10 @@
 
 #include <d3d11.h>
 #include <directxmath.h>
-using namespace DirectX;
+
+using DirectX::XMFLOAT2;
+using DirectX::XMFLOAT3;
+using DirectX::XMMATRIX;
 
 class ModelClass
 {
@@ -24,6 +27,7 @@ public:
 	void Render(ID3D11DeviceContext*);
 
 	int GetIndexCount();
+	XMMATRIX GetWorldMatrix();
 
 private:
 	bool LoadPLY(VertexType*&, ULONG*&, const char*);

@@ -16,6 +16,8 @@ public:
     int GetScrollDelta();
     bool IsMiddleMouseDown();
     POINT GetMousePos();
+
+    bool IsResizeDirty();
     UINT GetResizeWidth();
     UINT GetResizeHeight();
 
@@ -28,7 +30,8 @@ private:
 private:
     bool m_keys[256] = { false };
     bool m_isMiddleMouseDown = false;
-    POINT m_lastMousePos = { 0, 0 };
+    POINT m_mousePos = { 0, 0 };
+    bool m_isResizeDirty = false;
     UINT m_resizeWidth = 0, m_resizeHeight = 0;
     int m_scrollDelta = 0;
 };

@@ -26,7 +26,17 @@ bool InputSystem::IsMiddleMouseDown()
 
 POINT InputSystem::GetMousePos()
 {
-	return m_lastMousePos;
+	return m_mousePos;
+}
+
+bool InputSystem::IsResizeDirty()
+{
+	if (m_isResizeDirty)
+	{
+		m_isResizeDirty = false;
+		return true;
+	}
+	return false;
 }
 
 UINT InputSystem::GetResizeWidth()
@@ -66,6 +76,7 @@ LRESULT CALLBACK InputSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 	case WM_SIZE:
 		if (wparam == SIZE_MINIMIZED)
 			return 0;
+		m_isResizeDirty = true;
 		m_resizeWidth = (UINT)LOWORD(lparam);
 		m_resizeHeight = (UINT)HIWORD(lparam);
 		return 0;
@@ -91,8 +102,8 @@ LRESULT CALLBACK InputSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 
 	case WM_MOUSEMOVE:
 	{
-		m_lastMousePos.x = (int)(short)LOWORD(lparam);
-		m_lastMousePos.y = (int)(short)HIWORD(lparam);
+		m_mousePos.x = (int)(short)LOWORD(lparam);
+		m_mousePos.y = (int)(short)HIWORD(lparam);
 		return 0;
 	}
 	}

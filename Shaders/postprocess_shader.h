@@ -6,23 +6,21 @@
 #include <fstream>
 using namespace DirectX;
 
-class HalftoneShader
+class PostprocessShader
 {
-private:
-	struct HalftoneBufferType
-	{
-		float dotSize;
-		float padding[3];
-	};
-
 public:
-	HalftoneShader();
-	HalftoneShader(const HalftoneShader&);
-	~HalftoneShader();
+	PostprocessShader();
+	PostprocessShader(const PostprocessShader&);
+	~PostprocessShader();
 
-	bool Initialize(ID3D11Device*, const wchar_t*, LPCSTR);
+	template<typename BufferType>
+	bool Initialize(ID3D11Device*, const wchar_t*);
+
 	void Shutdown();
-	bool SetShaderParameters(ID3D11DeviceContext*, float);
+
+	template<typename BufferType>
+	bool SetShaderParameters(ID3D11DeviceContext*, const BufferType&);
+
 	bool Render(ID3D11DeviceContext*);
 
 private:
@@ -33,5 +31,5 @@ private:
 	ID3D11PixelShader* m_pixelShader = nullptr;
 
 	ID3D11SamplerState* m_sampleStateWrap = nullptr;
-	ID3D11Buffer* m_halftoneBuffer = nullptr;
+	ID3D11Buffer* m_constantBuffer = nullptr;
 };

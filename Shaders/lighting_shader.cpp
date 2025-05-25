@@ -4,6 +4,8 @@ LightingShader::LightingShader() {}
 LightingShader::LightingShader(const LightingShader&) {}
 LightingShader::~LightingShader() {}
 
+using namespace std;
+
 bool LightingShader::Initialize(ID3D11Device* device, const wchar_t* pixelFilename)
 {
 	wchar_t vsFilename[128];
@@ -187,9 +189,8 @@ void LightingShader::Shutdown() // Consider splitting up
 
 bool LightingShader::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 lightColor, XMFLOAT3 ambientColor, float celThreshold)
 {
-	XMVECTOR det;
-	XMMATRIX invProj = XMMatrixInverse(&det, projectionMatrix);
-	XMMATRIX invView = XMMatrixInverse(&det, viewMatrix);
+	XMMATRIX invProj = XMMatrixInverse(nullptr, projectionMatrix);
+	XMMATRIX invView = XMMatrixInverse(nullptr, viewMatrix);
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);

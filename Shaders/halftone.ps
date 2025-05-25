@@ -45,7 +45,7 @@ float4 GetBrightness(float2 pixelPos, float2 textureSize, float2 centerPos)
 	return (pixelDist >= cmy) ? 1 : 0;
 }
 
-float4 HalftonePixelShader(PixelInputType input) : SV_Target
+float4 PostprocessShader(PixelInputType input) : SV_Target
 {
 	float2 textureSize;
 	inputTexture.GetDimensions(textureSize.x, textureSize.y);

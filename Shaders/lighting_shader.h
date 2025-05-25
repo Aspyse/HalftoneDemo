@@ -4,8 +4,10 @@
 #include <d3dcompiler.h>
 #include <directxmath.h>
 #include <fstream>
-using namespace DirectX;
-using namespace std;
+
+using DirectX::XMFLOAT3;
+using DirectX::XMMATRIX;
+using DirectX::XMVECTOR;
 
 // Base class for lighting pass shaders
 class LightingShader
