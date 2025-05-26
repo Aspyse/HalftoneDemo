@@ -87,8 +87,10 @@ public:
 
 		deviceContext->OMSetRenderTargets(m_numTargetViews, &m_renderTarget, m_dsv);
 
-		//SetShaderParameters(deviceContext, data);
 		RenderFrame(deviceContext);
+
+		ID3D11RenderTargetView* nullRTV[1] = { nullptr };
+		deviceContext->OMSetRenderTargets(1, nullRTV, nullptr);
 
 		return true;
 	}
@@ -119,48 +121,9 @@ private:
 		return true;
 	}
 
-	// virtual SetShaderParameters()
 	virtual bool InitializeConstantBuffer(ID3D11Device* device) = 0;
-	/*
-	bool SetShaderParameters(ID3D11DeviceContext* deviceContext, const BufferType& data)
-	{
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		HRESULT result = deviceContext->Map(m_constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-		if (FAILED(result))
-			return false;
 
-		memcpy(mappedResource.pData, &data, sizeof(BufferType));
 
-		deviceContext->Unmap(m_constantBuffer, 0);
-
-		UINT bufferNumber = 0;
-
-		deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_constantBuffer);
-
-		return true;
-	}
-
-	bool InitializeConstantBuffer(ID3D11Device* device)
-	{
-		m_bufferSize = sizeof(BufferType);
-
-		// Create dynamic matrix constant buffer description
-		D3D11_BUFFER_DESC hbd;
-		ZeroMemory(&hbd, sizeof(hbd));
-		hbd.Usage = D3D11_USAGE_DYNAMIC;
-		hbd.ByteWidth = sizeof(BufferType);
-		hbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		hbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hbd.MiscFlags = 0;
-		hbd.StructureByteStride = 0;
-
-		HRESULT result = device->CreateBuffer(&hbd, nullptr, &m_constantBuffer);
-		if (FAILED(result))
-			return false;
-
-		return true;
-	}
-	*/
 
 	static void OutputShaderErrorMessage(ID3D10Blob* errorMessage, WCHAR* shaderFilename)
 	{
@@ -183,7 +146,7 @@ private:
 	}
 
 private:
-	ID3D11RenderTargetView* m_renderTarget = nullptr;
+	ID3D11RenderTargetView* m_renderTarget;
 	ID3D11ShaderResourceView** m_shaderResource = nullptr;
 	ID3D11DepthStencilView* m_dsv = nullptr;
 

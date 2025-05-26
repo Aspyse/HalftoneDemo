@@ -4,7 +4,6 @@ bool LightingPass::InitializeConstantBuffer(ID3D11Device* device)
 {
 	ComPtr<ID3D11Buffer> matrixBuffer, lightBuffer;
 	
-	// Create dynamic matrix constant buffer description
 	D3D11_BUFFER_DESC mbd;
 	ZeroMemory(&mbd, sizeof(mbd));
 	mbd.Usage = D3D11_USAGE_DYNAMIC;
@@ -54,8 +53,6 @@ bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
 
-	//deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_constantBuffer);
-
 	XMFLOAT3 ambientLight = XMFLOAT3(ambientColor[0] * ambientStrength, ambientColor[1] * ambientStrength, ambientColor[2] * ambientStrength);
 	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirection, viewMatrix);
 	XMFLOAT3 lightDirectionVS;
@@ -73,8 +70,6 @@ bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 	dataPtr2->ambientColor = ambientLight;
 
 	deviceContext->Unmap(m_constantBuffers[1].Get(), 0);
-
-	//deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_lightBuffer);
 
 	return true;
 }

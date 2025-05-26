@@ -60,9 +60,6 @@
     <ClCompile Include="external\miniply.cpp">
       <Filter>Source Files\External</Filter>
     </ClCompile>
-    <ClCompile Include="Shaders\lighting_shader.cpp">
-      <Filter>Source Files\Shaders</Filter>
-    </ClCompile>
     <ClCompile Include="Classes\camera.cpp">
       <Filter>Source Files\Classes</Filter>
     </ClCompile>
@@ -78,16 +75,16 @@
     <ClCompile Include="Subsystems\render_system.cpp">
       <Filter>Source Files\Subsystems</Filter>
     </ClCompile>
-    <ClCompile Include="Shaders\geometry_pass.cpp">
+    <ClCompile Include="Shaders\RenderPasses\geometry_pass.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="Shaders\halftone_shader.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="Shaders\postprocess_shader.cpp">
+    <ClCompile Include="Shaders\RenderPasses\lighting_pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Shaders\lighting_pass.cpp">
+    <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -122,9 +119,6 @@
     <ClInclude Include="external\miniply.h">
       <Filter>Source Files\External</Filter>
     </ClInclude>
-    <ClInclude Include="Shaders\lighting_shader.h">
-      <Filter>Source Files\Shaders</Filter>
-    </ClInclude>
     <ClInclude Include="Classes\camera.h">
       <Filter>Source Files\Classes</Filter>
     </ClInclude>
@@ -143,22 +137,22 @@
     <ClInclude Include="Classes\render_target.h">
       <Filter>Source Files\Classes</Filter>
     </ClInclude>
-    <ClInclude Include="Shaders\geometry_pass.h">
+    <ClInclude Include="Shaders\RenderPasses\geometry_pass.h">
       <Filter>Source Files\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="Shaders\halftone_shader.h">
       <Filter>Source Files\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="Classes\render_pass.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Shaders\postprocess_shader.h">
+    <ClInclude Include="Shaders\RenderPasses\render_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Subsystems\render_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Shaders\lighting_pass.h">
+    <ClInclude Include="Shaders\RenderPasses\lighting_pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\RenderPasses\halftone_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -167,9 +161,6 @@
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="Shaders\base.vs">
-      <Filter>Source Files\Shaders</Filter>
-    </None>
-    <None Include="Shaders\flat.ps">
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="Shaders\halftone.ps">
@@ -184,5 +175,6 @@
     <None Include="Shaders\shadow.vs">
       <Filter>Source Files\Shaders</Filter>
     </None>
+    <None Include="Shaders\flat.ps" />
   </ItemGroup>
 </Project>

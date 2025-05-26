@@ -67,7 +67,7 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 
 	float3 color = float3(C, M, Y);
 
-	//return float4(color, 1);
-	return CMY;
+	return float4(color, 1);
+	//return CMY;
 	//return float4(brightness.rgb,1);
 }

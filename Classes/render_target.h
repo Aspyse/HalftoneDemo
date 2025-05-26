@@ -10,6 +10,12 @@ class RenderTarget
 public:
     RenderTarget() = default;
 
+    bool SetTarget(ID3D11RenderTargetView* target)
+    {
+        m_target = target;
+        return true;
+    }
+
 	bool Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 	{
         m_target.Reset();
@@ -27,7 +33,7 @@ public:
         td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
         ComPtr<ID3D11Texture2D> texture;
-        HRESULT result = device->CreateTexture2D(&td, nullptr, &texture);
+        HRESULT result = device->CreateTexture2D(&td, nullptr, texture.GetAddressOf());
         if (FAILED(result))
             return false;
 
@@ -39,6 +45,17 @@ public:
 
         return true;
 	}
+
+    // TODO: consider getting pointer-to-pointer
+    ID3D11RenderTargetView* GetTarget()
+    {
+        return m_target.Get();
+    }
+
+    ID3D11ShaderResourceView** GetResource()
+    {
+        return m_resource.GetAddressOf();
+    }
 
 private:
     ComPtr<ID3D11RenderTargetView> m_target;

@@ -7,9 +7,7 @@
 #include "render_target.h"
 
 #include "geometry_pass.h"
-#include "lighting_shader.h"
 #include "halftone_shader.h"
-#include "postprocess_shader.h"
 #include "render_pass.h"
 
 #include <d3d11.h>
