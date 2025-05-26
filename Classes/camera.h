@@ -15,6 +15,8 @@ public:
 
 	bool Initialize(float, float, float, float);
 
+	bool Resize(UINT, UINT);
+
 	void SetPosition(float, float, float);
 	void SetRotation(float, float, float);
 	void SetOrbitPosition(float, float, float);
@@ -45,4 +47,7 @@ private:
 	POINT m_lastMousePos = { 0, 0 };
 	float m_yaw = 0.0f, m_pitch = 0.0f;
 	float m_distance = 1.0f;
+
+	float m_fov;
+	float m_screenNear = 0, m_screenDepth = 0;
 };

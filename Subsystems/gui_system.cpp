@@ -34,7 +34,7 @@ void GuiSystem::Shutdown()
 	ImGui::DestroyContext();
 }
 
-bool GuiSystem::Frame(RenderParameters renderParameters)
+bool GuiSystem::Frame(RenderParameters& renderParameters)
 {
 	// Start the ImGui frame
 	ImGui_ImplDX11_NewFrame();

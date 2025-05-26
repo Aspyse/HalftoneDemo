@@ -36,7 +36,5 @@ private:
 	RenderSystem* m_renderSystem = nullptr;
 
 	WNDCLASSEXW m_wc;
-	//ZeroMemory(&m_wc, sizeof(m_wc));
-	//m_wc.cbSize = sizeof(WNDCLASSEXW);
 	HWND m_hwnd = nullptr;
 };

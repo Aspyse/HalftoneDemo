@@ -20,11 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Classes\camera.cpp" />
+    <ClCompile Include="Shaders\lighting_pass.cpp" />
     <ClCompile Include="Shaders\lighting_shader.cpp" />
     <ClCompile Include="Classes\model.cpp" />
-    <ClCompile Include="Classes\render_pass_old.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="external\miniply.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp" />
@@ -46,9 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Classes\camera.h" />
-    <ClInclude Include="Classes\i_render_pass.h" />
-    <ClInclude Include="Shaders\ConstantBuffers\halftone_CB.h" />
-    <ClInclude Include="Shaders\ConstantBuffers\lighting_CB.h" />
+    <ClInclude Include="Shaders\lighting_pass.h" />
     <ClInclude Include="Shaders\lighting_shader.h" />
     <ClInclude Include="Classes\model.h" />
     <ClInclude Include="Classes\render_target.h" />

@@ -27,7 +27,8 @@ bool Engine::Initialize()
 	m_guiSystem->Initialize(m_hwnd);
 
 	m_camera = new CameraClass;
-	m_camera->Initialize(30, width/height, 0.3f, 100.0f);
+	float aspect = static_cast<float>(width) / static_cast<float>(height);
+	m_camera->Initialize(30, aspect, 0.3f, 100.0f);
 	m_camera->SetPosition(0.0f, 0.1f, -1.0f);
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
 	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);
@@ -112,10 +113,16 @@ bool Engine::Frame()
 		newPos.x - m_lastMousePos.x,
 		newPos.y - m_lastMousePos.y
 	};
+	m_lastMousePos = newPos;
 	m_camera->Frame(delta, m_inputSystem->IsMiddleMouseDown(), m_inputSystem->IsKeyDown(VK_SHIFT), m_inputSystem->GetScrollDelta());
 
 	// Render
-	result = m_renderSystem->Render(m_renderParameters, m_camera->GetViewMatrix(), m_models);
+	if (m_inputSystem->IsResizeDirty())
+	{
+		m_renderSystem->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
+		m_camera->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
+	}
+	result = m_renderSystem->Render(m_renderParameters, m_camera->GetViewMatrix(), m_camera->GetProjectionMatrix(), m_models);
 	if (!result)
 		return false;
 

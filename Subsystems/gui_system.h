@@ -15,7 +15,7 @@ public:
 
 	bool Initialize(HWND);
 	void Shutdown();
-	bool Frame(RenderParameters);
+	bool Frame(RenderParameters&);
 
 private:
 	ImGuiIO* m_io = nullptr;

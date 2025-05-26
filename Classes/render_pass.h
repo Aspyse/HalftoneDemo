@@ -1,16 +1,16 @@
 #pragma once
 
-#include "i_render_pass.h"
-#include "render_target.h"
 #include <fstream>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <functional> // TODO: check if expensive overhead
+#include <vector>
+#include <wrl/client.h>
 
+using Microsoft::WRL::ComPtr;
 using std::ofstream;
 
-template<typename BufferType>
-class RenderPass : public IRenderPass
+class RenderPass
 {
 public:
 	std::function<void()> Begin; // Lambda for processing before rendering, e.g. binding extra samplers
@@ -72,19 +72,22 @@ public:
 		return true;
 	}
 
-	bool Render(ID3D11DeviceContext* deviceContext, const BufferType& data)
+	bool Render(ID3D11DeviceContext* deviceContext, float* clearColor)
 	{
 		if (Begin) Begin();
+
+		for (UINT i = 0; i < m_constantBuffers.size(); ++i)
+			deviceContext->PSSetConstantBuffers(i, 1, m_constantBuffers[i].GetAddressOf());
 
 		deviceContext->PSSetShaderResources(0, m_numResourceViews, m_shaderResource); // check if working
 
 		deviceContext->ClearRenderTargetView(m_renderTarget, clearColor);
-		deviceContext->OMSetRenderTargets(m_numTargetViews, &m_renderTarget, m_dsv);
-
 		if (m_dsv)
 			deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		SetShaderParameters(deviceContext, data);
+		deviceContext->OMSetRenderTargets(m_numTargetViews, &m_renderTarget, m_dsv);
+
+		//SetShaderParameters(deviceContext, data);
 		RenderFrame(deviceContext);
 
 		return true;
@@ -116,6 +119,9 @@ private:
 		return true;
 	}
 
+	// virtual SetShaderParameters()
+	virtual bool InitializeConstantBuffer(ID3D11Device* device) = 0;
+	/*
 	bool SetShaderParameters(ID3D11DeviceContext* deviceContext, const BufferType& data)
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -154,6 +160,7 @@ private:
 
 		return true;
 	}
+	*/
 
 	static void OutputShaderErrorMessage(ID3D10Blob* errorMessage, WCHAR* shaderFilename)
 	{
@@ -182,12 +189,11 @@ private:
 
 	UINT m_numTargetViews = 0, m_numResourceViews = 0;
 
-	size_t        m_bufferSize = 0;
-	ID3D11Buffer* m_constantBuffer = nullptr;
-	BufferType m_data;
-
 	ID3D11VertexShader* m_vertexShader = nullptr;
 	ID3D11PixelShader* m_pixelShader = nullptr;
 
 	// list of UI parameters
+
+protected:
+	std::vector<ComPtr<ID3D11Buffer>> m_constantBuffers;
 };

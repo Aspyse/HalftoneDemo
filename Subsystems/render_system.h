@@ -11,7 +11,6 @@
 #include "halftone_shader.h"
 #include "postprocess_shader.h"
 #include "render_pass.h"
-#include "i_render_pass.h"
 
 #include <d3d11.h>
 #include <DirectXMath.h>
@@ -31,7 +30,7 @@ public:
 
 	bool Initialize(HWND, WNDCLASSEXW);
 	void Shutdown();
-	bool Render(RenderParameters, XMMATRIX, vector<std::unique_ptr<ModelClass>>&);
+	bool Render(RenderParameters&, XMMATRIX, XMMATRIX, vector<std::unique_ptr<ModelClass>>&);
 
 	void Resize(UINT, UINT);
 
@@ -63,7 +62,7 @@ private:
 	//PostprocessShader* m_halftoneShader = nullptr;
 	vector<std::unique_ptr<ModelClass>> m_models;
 	vector<std::unique_ptr<RenderTarget>> m_targets;
-	vector<std::unique_ptr<IRenderPass>> m_passes;
+	vector<std::unique_ptr<RenderPass>> m_passes;
 
 	bool m_isSwapChainOccluded = false;
 
@@ -77,9 +76,6 @@ private:
 	ID3D11RasterizerState* m_rasterState = nullptr;
 
 	ID3D11SamplerState* m_sampler = nullptr;
-
-	XMMATRIX m_projectionMatrix = {};
-	XMMATRIX m_worldMatrix = {};
 
 	D3D11_VIEWPORT m_viewport = {};
 
