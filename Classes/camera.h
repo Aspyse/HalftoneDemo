@@ -1,8 +1,10 @@
 #pragma once
 
-#include "input_system.h"
+#include <windows.h>
 #include <directxmath.h>
-using namespace DirectX;
+
+using DirectX::XMFLOAT3;
+using DirectX::XMMATRIX;
 
 class CameraClass
 {
@@ -11,7 +13,9 @@ public:
 	CameraClass(const CameraClass&);
 	~CameraClass();
 
-	void Initialize();
+	bool Initialize(float, float, float, float);
+
+	bool Resize(UINT, UINT);
 
 	void SetPosition(float, float, float);
 	void SetRotation(float, float, float);
@@ -24,8 +28,9 @@ public:
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetRotation();
 
-	void Frame(InputSystem*);
-	void GetViewMatrix(XMMATRIX&);
+	void Frame(POINT, bool, bool, int);
+	XMMATRIX GetViewMatrix() const;
+	XMMATRIX GetProjectionMatrix() const;
 
 private:
 	const float ORBIT_SENSITIVITY = 0.2f;
@@ -37,8 +42,12 @@ private:
 	XMFLOAT3 m_orbitPos = { 0.0f, 0.0f, 0.0f };
 	
 	XMMATRIX m_viewMatrix = {};
+	XMMATRIX m_projectionMatrix = {};
 
 	POINT m_lastMousePos = { 0, 0 };
 	float m_yaw = 0.0f, m_pitch = 0.0f;
 	float m_distance = 1.0f;
+
+	float m_fov;
+	float m_screenNear = 0, m_screenDepth = 0;
 };

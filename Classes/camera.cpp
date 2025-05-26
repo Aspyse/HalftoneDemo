@@ -8,6 +8,25 @@ CameraClass::CameraClass() {}
 CameraClass::CameraClass(const CameraClass&) {}
 CameraClass::~CameraClass() {}
 
+bool CameraClass::Initialize(float fov, float aspect, float screenNear, float screenDepth)
+{
+	m_fov = XMConvertToRadians(fov);
+	m_screenNear = screenNear;
+	m_screenDepth = screenDepth;
+
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, aspect, screenNear, screenDepth);
+
+	return true;
+}
+
+bool CameraClass::Resize(UINT width, UINT height)
+{
+	float aspect = static_cast<float>(width) / static_cast<float>(height);
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, aspect, m_screenNear, m_screenDepth);
+
+	return true;
+}
+
 void CameraClass::SetPosition(float x, float y, float z)
 {
 	m_position.x = x;
@@ -133,22 +152,15 @@ XMFLOAT3 CameraClass::GetRotation()
 	return XMFLOAT3(m_rotation.x, m_rotation.y, m_rotation.z);
 }
 
-void CameraClass::Frame(InputSystem* inputHandle)
+void CameraClass::Frame(POINT delta, bool isMiddleMouseDown, bool isShiftDown, int scrollDelta)
 {
-	POINT newPos = inputHandle->GetMousePos();
-	POINT delta = {
-		newPos.x - m_lastMousePos.x,
-		newPos.y - m_lastMousePos.y
-	};
-	m_lastMousePos = newPos;
-	if (inputHandle->IsMiddleMouseDown())
+	if (isMiddleMouseDown)
 	{
-		if (inputHandle->IsKeyDown(VK_SHIFT))
+		if (isShiftDown)
 			Pan(delta.x * PAN_SENSITIVITY, delta.y * PAN_SENSITIVITY);
 		else
 			Orbit(delta.x * ORBIT_SENSITIVITY, -delta.y * ORBIT_SENSITIVITY);
 	}
-	int scrollDelta = inputHandle->GetScrollDelta();
 	if (scrollDelta != 0)
 		Zoom(-scrollDelta * ZOOM_SENSITIVITY);
 
@@ -178,7 +190,12 @@ void CameraClass::Frame(InputSystem* inputHandle)
 	m_viewMatrix = XMMatrixLookAtLH(positionVector, lookAtVector, upVector);
 }
 
-void CameraClass::GetViewMatrix(XMMATRIX& output)
+XMMATRIX CameraClass::GetViewMatrix() const
 {
-	output = m_viewMatrix;
+	return m_viewMatrix;
+}
+
+XMMATRIX CameraClass::GetProjectionMatrix() const
+{
+	return m_projectionMatrix;
 }

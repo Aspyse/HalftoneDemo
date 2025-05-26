@@ -26,7 +26,7 @@ ID3D11ShaderResourceView* GeometryPass::GetShadowMap()
     return m_shadowSRV;
 }
 
-XMMATRIX GeometryPass::GetLightViewProj()
+XMMATRIX GeometryPass::GetLightViewProj() const
 {
     return m_lightViewProj;
 }

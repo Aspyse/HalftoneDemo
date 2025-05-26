@@ -64,7 +64,7 @@ float ShadowVisibility(float3 worldPos)
 	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z - bias);
 }
 
-float4 LightPixelShader(PixelInputType input) : SV_TARGET
+float4 PostprocessShader(PixelInputType input) : SV_TARGET
 {
 	const float PI = 3.14159;
 	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
@@ -79,7 +79,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	float3 H = normalize(V + L);
 
 	// DEBUG
-	//return float4(normal, 1.0);
+	//return float4(albedo, 1.0);
 	//return float4(viewPos.rgb, 1);
 	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
 

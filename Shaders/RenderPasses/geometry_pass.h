@@ -43,7 +43,7 @@ public:
 
 	ID3D11ShaderResourceView* GetGBuffer(UINT);
 	ID3D11ShaderResourceView* GetShadowMap();
-	XMMATRIX GetLightViewProj();
+	XMMATRIX GetLightViewProj() const;
 
 private:
 	bool CompileShader(ID3D11Device*);
