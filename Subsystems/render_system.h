@@ -7,7 +7,6 @@
 #include "render_target.h"
 
 #include "geometry_pass.h"
-#include "halftone_shader.h"
 #include "render_pass.h"
 
 #include <d3d11.h>
@@ -35,7 +34,6 @@ public:
 	ID3D11Device* GetDevice();
 
 private:
-	void BeginScene(float*);
 	void EndScene();
 
 	bool InitializeDeviceD3D(HWND);
@@ -54,10 +52,9 @@ private:
 	void ResetViewport(float, float);
 
 private:
-	// TODO: lists of passes/shaders and rendertargets
 	ID3D11ShaderResourceView* m_gBuffer[4];
 	GeometryPass* m_geometryPass = nullptr;
-	//PostprocessShader* m_halftoneShader = nullptr;
+
 	vector<std::unique_ptr<ModelClass>> m_models;
 	vector<std::unique_ptr<RenderTarget>> m_targets;
 	vector<std::unique_ptr<RenderPass>> m_passes;
@@ -71,7 +68,6 @@ private:
 
 	ID3D11DepthStencilState* m_depthStencilState = nullptr;
 	ID3D11DepthStencilView* m_depthStencilView = nullptr;
-	ID3D11RasterizerState* m_rasterState = nullptr;
 
 	ID3D11SamplerState* m_sampler = nullptr;
 

@@ -89,9 +89,6 @@ public:
 
 		RenderFrame(deviceContext);
 
-		ID3D11RenderTargetView* nullRTV[1] = { nullptr };
-		deviceContext->OMSetRenderTargets(1, nullRTV, nullptr);
-
 		return true;
 	}
 

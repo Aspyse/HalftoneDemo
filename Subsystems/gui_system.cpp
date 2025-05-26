@@ -34,7 +34,7 @@ void GuiSystem::Shutdown()
 	ImGui::DestroyContext();
 }
 
-bool GuiSystem::Frame(RenderParameters& renderParameters)
+bool GuiSystem::Frame(RenderParameters& rParams)
 {
 	// Start the ImGui frame
 	ImGui_ImplDX11_NewFrame();
@@ -48,15 +48,16 @@ bool GuiSystem::Frame(RenderParameters& renderParameters)
 		ImGui::Begin("Test Window");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 
-		ImGui::ColorEdit3("Albedo Color", renderParameters.albedoColor);
-		ImGui::DragFloat("Cel Threshold", &renderParameters.celThreshold, 0.002f, 0, 1);
-		ImGui::DragFloat("Roughness", &renderParameters.roughness, 0.002f, 0, 1);
+		ImGui::ColorEdit3("Albedo Color", rParams.albedoColor);
+		ImGui::DragFloat("Cel Threshold", &rParams.celThreshold, 0.002f, 0, 1);
+		ImGui::DragFloat("Roughness", &rParams.roughness, 0.002f, 0, 1);
+		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.002f, 1, 50);
 
 		ImGui::Separator();
 
-		ImGui::DragFloat3("Light Direction", renderParameters.lightDirection, 0.004f);
-		ImGui::ColorEdit3("Clear Color", renderParameters.clearColor);
-		ImGui::DragFloat("Ambient Strength", &renderParameters.ambientStrength, 0.002f, 0, 1);
+		ImGui::DragFloat3("Light Direction", rParams.lightDirection, 0.004f);
+		ImGui::ColorEdit3("Clear Color", rParams.clearColor);
+		ImGui::DragFloat("Ambient Strength", &rParams.ambientStrength, 0.002f, 0, 1);
 
 		ImGui::Separator();
 

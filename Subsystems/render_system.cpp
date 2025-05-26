@@ -59,18 +59,6 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 		return false;
 
 	m_deviceContext->PSSetSamplers(0, 1, &m_sampler);
-	
-	m_geometryPass = new GeometryPass;
-	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
-
-	// Init render targets, stored in vector for management (TODO)
-	auto lightingOut = std::make_unique<RenderTarget>();
-	lightingOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(lightingOut));
-
-	auto halftoneOut = std::make_unique<RenderTarget>();
-	halftoneOut->SetTarget(m_renderTargetView);
-	m_targets.push_back(std::move(halftoneOut));
 
 	// Shadow comparison sampler
 	ID3D11SamplerState* shadowSampler;
@@ -93,6 +81,20 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	result = m_device->CreateSamplerState(&shadowDesc, &shadowSampler);
 	if (FAILED(result))
 		return false;
+	
+	m_geometryPass = new GeometryPass;
+	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
+
+	// Init render targets, stored in vector for management (TODO)
+	auto lightingOut = std::make_unique<RenderTarget>();
+	lightingOut->Initialize(m_device, m_screenWidth, m_screenHeight);
+	m_targets.push_back(std::move(lightingOut));
+
+	/*
+	auto halftoneOut = std::make_unique<RenderTarget>();
+	halftoneOut->SetTarget(m_renderTargetView);
+	m_targets.push_back(std::move(halftoneOut));
+	*/
 
 	// Render passes
 	auto lightingPass = std::make_unique<LightingPass>();
@@ -102,7 +104,6 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
 	};
 	lightingPass->AssignShaderResource(m_gBuffer, 4);
-	//lightingPass->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
 	lightingPass->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
 	m_passes.push_back(std::move(lightingPass));
 
@@ -110,7 +111,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	auto halftonePass = std::make_unique<HalftonePass>();
 	halftonePass->Initialize(m_device, L"Shaders/halftone.ps");
 	halftonePass->AssignShaderResource(m_targets[0]->GetResource(), 1);
-	halftonePass->AssignRenderTarget(m_targets[1]->GetTarget(), 1, m_depthStencilView);
+	halftonePass->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
 	m_passes.push_back(std::move(halftonePass));
 
 
@@ -119,6 +120,15 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 
 bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, vector<std::unique_ptr<ModelClass>>& models)
 {
+	// Handle minimize or screen lock
+	if (m_isSwapChainOccluded && m_swapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+	{
+		::Sleep(10);
+		return false;
+	}
+	m_isSwapChainOccluded = false;
+	
+	// GEOMETRY PASS
 	XMFLOAT3 lightDirectionF = XMFLOAT3(rParams.lightDirection[0], rParams.lightDirection[1], rParams.lightDirection[2]);
 	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirectionF));
 	XMFLOAT3 albedoColor = XMFLOAT3(rParams.albedoColor[0], rParams.albedoColor[1], rParams.albedoColor[2]);
@@ -128,7 +138,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 		model->Render(m_deviceContext);
 		XMMATRIX worldMatrix = model->GetWorldMatrix();
 
-		// GEOMETRY PASS
 		m_geometryPass->RenderShadow(m_deviceContext, model->GetIndexCount(), lightDirectionVec);
 
 		// Reset after viewport is set to shadowmap size
@@ -144,37 +153,28 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
 	m_gBuffer[3] = m_geometryPass->GetShadowMap();
 
-
+	// LIGHTING PASS
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
 	float celThreshold = 0.0f;
 
-	// TODO: URGENT REFACTOR
+	// TODO: IMPORTANT! REFACTOR
 	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
 		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, celThreshold);
 	if (auto* hp = dynamic_cast<HalftonePass*>(m_passes[1].get()))
 		hp->SetShaderParameters(m_deviceContext, rParams.halftoneDotSize);
 
+	// Forward render
 	for (auto& pass : m_passes)
 	{
 		pass->Render(m_deviceContext, rParams.clearColor);
+		ClearRenderTargets();
 	}
 
-	/* OLD PIPELINE
-	// POST-PROCESS (HALFTONE)
-	ID3D11ShaderResourceView* srv = m_halftoneRT->GetResource();
-	m_deviceContext->PSSetShaderResources(0, 1, &srv);
 
-	// Clear the buffers to begin the scene
-	BeginScene();
-	ResetViewport(m_screenWidth, m_screenHeight);
-
-	m_halftoneShader->SetShaderParameters(m_deviceContext, m_halftoneDotSize);
-	m_halftoneShader->Render(m_deviceContext);
-
-	END OF OLD PIPELINE*/
 
 	// Render GUI
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // TODO: consider decoupling with GUI
+	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	// Present the rendered scene to the screen
 	EndScene();
@@ -184,12 +184,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 void RenderSystem::Shutdown()
 {
 	ImGui_ImplDX11_Shutdown();
-	
-	if (m_rasterState)
-	{
-		m_rasterState->Release();
-		m_rasterState = nullptr;
-	}
 	if (m_depthStencilState)
 	{
 		m_depthStencilState->Release();
@@ -208,25 +202,29 @@ void RenderSystem::Resize(UINT width, UINT height)
 	
 	CleanupRenderTarget();
 	CleanupDepthBuffer();
-	m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
-
+	HRESULT hr = m_swapChain->ResizeBuffers(0, m_screenWidth, m_screenHeight, DXGI_FORMAT_UNKNOWN, 0);
+	if (FAILED(hr))
+		return;
 	CreateRenderTarget();
 	CreateDepthBuffer();
 
-	ResetViewport(m_screenWidth, m_screenHeight);
-
-	// TODO: resize list of rendertargets
-
+	// TODO: IMPORTANT! AUTOMATE
 	for (auto& target : m_targets)
 	{
 		target->Initialize(m_device, m_screenWidth, m_screenHeight);
 	}
-
 	m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
-	//m_passes[1]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
+
+	m_passes[0]->AssignShaderResource(m_gBuffer, 4);
+	m_passes[0]->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
+
+	m_passes[1]->AssignShaderResource(m_targets[0]->GetResource(), 1);
+	m_passes[1]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
+
+	ResetViewport(m_screenWidth, m_screenHeight);
 }
 
-ID3D11Device* RenderSystem::GetDevice()
+ID3D11Device* RenderSystem::GetDevice() // For model
 {
 	return m_device;
 }
@@ -234,21 +232,6 @@ ID3D11Device* RenderSystem::GetDevice()
 
 
 // HELPER FUNCTIONS
-void RenderSystem::BeginScene(float* clearColor)
-{
-	// Handle minimize or screen lock
-	if (m_isSwapChainOccluded && m_swapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-	{
-		::Sleep(10);
-		return;
-	}
-	m_isSwapChainOccluded = false;
-
-	m_deviceContext->ClearRenderTargetView(m_renderTargetView, clearColor);
-	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
-	m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-}
-
 void RenderSystem::EndScene()
 {
 	// Present
@@ -424,6 +407,7 @@ void RenderSystem::CleanupDepthBuffer()
 
 bool RenderSystem::InitializeRaster()
 {
+	ID3D11RasterizerState* rasterState = nullptr;
 	D3D11_RASTERIZER_DESC rd;
 	ZeroMemory(&rd, sizeof(rd));
 	rd.AntialiasedLineEnable = false;
@@ -436,11 +420,14 @@ bool RenderSystem::InitializeRaster()
 	rd.ScissorEnable = false;
 	rd.SlopeScaledDepthBias = 0.0f;
 
-	HRESULT result = m_device->CreateRasterizerState(&rd, &m_rasterState);
+	HRESULT result = m_device->CreateRasterizerState(&rd, &rasterState);
 	if (FAILED(result))
 		return false;
 
-	m_deviceContext->RSSetState(m_rasterState);
+	m_deviceContext->RSSetState(rasterState);
+
+	rasterState->Release();
+	rasterState = nullptr;
 
 	return true;
 }

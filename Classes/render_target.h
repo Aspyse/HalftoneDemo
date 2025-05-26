@@ -39,9 +39,13 @@ public:
 
         // RTV
         device->CreateRenderTargetView(texture.Get(), nullptr, m_target.GetAddressOf());
+        if (FAILED(result))
+            return false;
 
         // SRV
         device->CreateShaderResourceView(texture.Get(), nullptr, m_resource.GetAddressOf());
+        if (FAILED(result))
+            return false;
 
         return true;
 	}
