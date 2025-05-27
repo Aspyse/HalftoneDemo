@@ -16,6 +16,13 @@ public:
         return true;
     }
 
+    bool SetResource(ID3D11ShaderResourceView* resource, UINT numViews)
+    {
+        m_resource = resource;
+        m_numViews = numViews;
+        return true;
+    }
+
 	bool Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 	{
         m_target.Reset();
@@ -59,6 +66,11 @@ public:
     ID3D11ShaderResourceView** GetResource()
     {
         return m_resource.GetAddressOf();
+    }
+
+    UINT GetNumViews()
+    {
+        return m_numViews;
     }
 
 private:

@@ -63,7 +63,7 @@ private:
 	ID3D11ShaderResourceView *m_albedoSRV = nullptr, *m_normalSRV = nullptr;
 
 	ID3D11ShaderResourceView* m_depthSRV = nullptr;
-	ID3D11DepthStencilView* m_dsv;
+	ID3D11DepthStencilView* m_dsv = nullptr;
 
 	ID3D11VertexShader* m_shadowShader = nullptr;
 	ID3D11DepthStencilView* m_shadowDSV = nullptr;

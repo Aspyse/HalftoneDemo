@@ -1,0 +1,17 @@
+Texture2D bgTexture : register(t0);
+Texture2D fgTexture : register(t1);
+SamplerState samplerState : register(s0);
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};
+
+float4 PostprocessShader(PixelInputType input) : SV_TARGET
+{
+	float3 bg = bgTexture.Sample(samplerState, input.uv);
+	float3 fg = fgTexture.Sample(samplerState, input.uv);
+	
+	return float4(fg, 1);
+}

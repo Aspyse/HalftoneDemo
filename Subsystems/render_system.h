@@ -34,13 +34,15 @@ public:
 	ID3D11Device* GetDevice();
 
 private:
+	bool AssignTargets();
+
 	void EndScene();
 
 	bool InitializeDeviceD3D(HWND);
 	void CleanupDeviceD3D();
 	bool CreateRenderTarget();
 	void CleanupRenderTarget();
-	void ClearRenderTargets();
+	void ReleaseRenderTargets();
 
 	bool InitializeDepthStencilState();
 	bool InitializeRaster();

@@ -45,21 +45,9 @@ float ShadowVisibility(float3 worldPos)
 
 	float3 uv = lightPos.xyz / lightPos.w;
 
-	//return float4(uv.z.xxx, 1);
-
 	float2 shadowMapUV = float2(0.5f + uv.x * 0.5f, 0.5f - uv.y * 0.5f);
 
-	//if (uv.x < -1 || uv.x > 1 || uv.y < -1 || uv.y > 1 || uv.z < 0 || uv.z > 1)
-		//return 1;
-
-	// Try with plain comparison first for debugging
 	const float bias = 0.0022f;
-    float depthFromShadowMap = shadowMap.Sample(pointClamp, shadowMapUV).r;
-    float currentDepth = lightPos.z - bias;
-    
-    // Manual comparison - can help diagnose hardware PCF issues
-    //return (currentDepth > depthFromShadowMap) ? 0.0f : 1.0f;
-
 
 	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z - bias);
 }
@@ -83,7 +71,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	//return float4(viewPos.rgb, 1);
 	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
 
-	// AMBIENT
+	/* AMBIENT */
     float3 ambient = albedo * ambientColor;
 
 	float depth = depthTexture.Sample(pointClamp, input.uv).r;
@@ -91,12 +79,12 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	if (depth > clipDistance)
 		return float4(ambient,1);
 
-	// SHADOW MAPPING
+	/* SHADOW MAPPING */
 	float4 worldPos = mul(float4(viewPos,1), invView);
 	float vis = 1;
 	vis = ShadowVisibility(worldPos);
 
-	// COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory
+	/* COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory */
 	float NdotL = saturate(dot(normal, L));
 	float NdotV = saturate(dot(normal, V));
 	float NdotH = saturate(dot(normal, H));
@@ -122,6 +110,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
     // lambertian diffuse
     float3 diffuse = (1.0 - F) * albedo / PI;
 
+	/* OUTPUT */
     float3 color = (diffuse + specular) * lightColor * NdotL * vis;
 
 	return float4(color + ambient, 1);

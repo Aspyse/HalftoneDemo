@@ -35,6 +35,6 @@ private:
 	GuiSystem* m_guiSystem = nullptr;
 	RenderSystem* m_renderSystem = nullptr;
 
-	WNDCLASSEXW m_wc;
+	WNDCLASSEXW m_wc = { 0 };
 	HWND m_hwnd = nullptr;
 };

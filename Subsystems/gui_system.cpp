@@ -51,7 +51,7 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 		ImGui::ColorEdit3("Albedo Color", rParams.albedoColor);
 		ImGui::DragFloat("Cel Threshold", &rParams.celThreshold, 0.002f, 0, 1);
 		ImGui::DragFloat("Roughness", &rParams.roughness, 0.002f, 0, 1);
-		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.002f, 1, 50);
+		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.5f, 1, 50);
 
 		ImGui::Separator();
 

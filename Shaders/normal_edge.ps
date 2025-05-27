@@ -1,0 +1,26 @@
+Texture2D inputTexture : register(t0); // must be VS normal
+SamplerState samplerState : register(s0);
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};
+
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+    float3 N = normalize(inputTexture.Sample(samplerState, input.uv) * 2 - 1);
+    
+    float3 dNdx = ddx(N);
+    float3 dNdy = ddy(N);
+    
+    float edge = sqrt(dot(dNdx, dNdx) + dot(dNdx, dNdx));
+    edge *= 100;
+    
+    // optional: gamma-correct or pow for stylized falloff
+    //edge = pow(edge, 0.75);
+    // TODO: threshold parameter
+    //edge = (edge < 0.2) ? 0 : 1;
+    
+    return float4(1-edge, 1-edge, 1-edge, 1);
+}

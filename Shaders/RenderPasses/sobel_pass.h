@@ -9,17 +9,21 @@ using DirectX::XMFLOAT3;
 using DirectX::XMVECTOR;
 
 // De-facto template for Render Pass definitions
-class HalftonePass : public RenderPass
+class SobelPass : public RenderPass
 {
 private:
-	struct HalftoneBufferType
+	struct SobelBufferType
 	{
-		float dotSize;
+		int isScharr;
+		XMFLOAT2 offset;
+		int isFeather;
+		float threshold;
+
 		float padding[3];
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, float, UINT, UINT);
+	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, bool, bool, float);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

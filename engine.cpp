@@ -8,7 +8,6 @@ bool Engine::Initialize()
 {
 	const int width = 1280, height = 800;
 	
-	bool result;
 	WNDCLASSEXW m_wc = { sizeof(m_wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Halftone Demo", nullptr };
 	::RegisterClassExW(&m_wc);
 	HWND m_hwnd = ::CreateWindow(m_wc.lpszClassName, L"Halftone Demo", WS_OVERLAPPEDWINDOW, 100, 100, width, height, nullptr, nullptr, m_wc.hInstance, nullptr);
@@ -38,7 +37,7 @@ bool Engine::Initialize()
 
 	// FOR TESTING: create model
 	auto model = std::make_unique<ModelClass>();
-	model->Initialize(m_renderSystem->GetDevice(), "Models/bun_zipper.ply");
+	model->Initialize(m_renderSystem->GetDevice(), "Models/dragon_vrip.ply");
 	m_models.push_back(std::move(model));
 
 	return true; // TEMP

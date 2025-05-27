@@ -22,7 +22,7 @@ bool HalftonePass::InitializeConstantBuffer(ID3D11Device* device)
 	return true;
 }
 
-bool HalftonePass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float dotSize)
+bool HalftonePass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float dotSize, UINT texWidth, UINT texHeight)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT result = deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -31,6 +31,7 @@ bool HalftonePass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float
 
 	HalftoneBufferType* dataPtr = (HalftoneBufferType*)mappedResource.pData;
 
+	// TODO: fix
 	dataPtr->dotSize = dotSize;
 
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);

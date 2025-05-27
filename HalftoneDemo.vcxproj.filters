@@ -84,6 +84,12 @@
     <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\normal_edge_pass.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\sobel_pass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine.h">
@@ -149,6 +155,12 @@
     <ClInclude Include="Shaders\RenderPasses\halftone_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Shaders\RenderPasses\sobel_pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\RenderPasses\blend_pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\base.ps">
@@ -170,5 +182,8 @@
       <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="Shaders\flat.ps" />
+    <None Include="Shaders\normal_edge.ps" />
+    <None Include="Shaders\sobel.ps" />
+    <None Include="Shaders\blend.ps" />
   </ItemGroup>
 </Project>
