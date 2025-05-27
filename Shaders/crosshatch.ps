@@ -2,11 +2,7 @@ Texture2D colorTexture : register(t0);
 Texture2D normalTexture : register(t1);
 SamplerState samplerState : register(s0);
 
-static const int   RING_COUNT   = 10;    // how many concentric bands
-static const float RING_WIDTH   = 0.25;  // thickness of each ring (0–0.5)
-static const int   SPOKE_COUNT  = 80;    // how many spokes around the sphere
-static const float SPOKE_WIDTH  = 0.2;  // thickness of each spoke (0–0.5)
-static const float2 CENTER       = float2(0.5, 0.5);  // center of projection in UV
+
 
 struct PixelInputType
 {
@@ -16,13 +12,19 @@ struct PixelInputType
 
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
-    static const float wH = 30; // 30
-	static const float wA = 10; // 10
-	static const float freqH = 10; // 10 is good
-	static const float freqA = 8; // 8
+    float vis = colorTexture.Sample(samplerState, input.uv).r;
 
-	float halfWidthA = wA * 0.5;
-	float halfWidthH = wH * 0.5;
+	float artistThicknessMul = 1.1;
+
+	static const float wH = 32;
+	static const float freqH = 8;
+
+	static const float wA = 1;
+	static const float freqA = 4;
+
+
+	float halfWidthA = wA * 0.5 * artistThicknessMul;
+	float halfWidthH = wH * 0.5 * artistThicknessMul;
 	
 	static float2 textureSize;
 	colorTexture.GetDimensions(textureSize.x, textureSize.y);
@@ -50,29 +52,33 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 	float valH = frac(h * freqH);
 	float dH = abs(valH - 0.5);
 	float gradMagH = length(gradH);
+	//float gradMagH = 0.01;
 	float pixelDistH = dH / (gradMagH + 1e-5);
 
 	float lineOutH = 1.0 - smoothstep(halfWidthH - 0.5, halfWidthH + 0.5, pixelDistH);
 
 	/* RADIAL LINES */
-	float angle = atan2(normal.g, normal.r);
+	float2 Nxy = normalize(normal.xy);
+	float angle = atan2(Nxy.g, Nxy.r);
 
-	float dAdx = (atan2(nRight.g, nRight.r) - atan2(nLeft.g, nLeft.r));
-	float dAdy = (atan2(nUp.g, nUp.r) - atan2(nDown.g, nDown.r));
+	float dNXdx = ddx(Nxy.x);
+	float dNXdy = ddy(Nxy.x);
+	float dNYdx = ddx(Nxy.y);
+	float dNYdy = ddy(Nxy.y);
 
-	float2 gradA = float2(dAdx, dAdy);
-	float distRad = frac(angle * freqA) - 0.5;
+	float denom = Nxy.x*Nxy.x + Nxy.y*Nxy.y + 1e-6;
 
-	float spacingA = 1.0 / freqA;
-	float valA = frac(angle * freqA);
-	float dA = abs(valA - 0.5);
-	float gradMagA = length(gradA);
-	float pixelDistA = dA / (gradMagA + 1e-5);
+	float dTdx = (Nxy.x*dNYdx - Nxy.y*dNXdx) / denom;
+	float dTdy = (Nxy.x*dNYdy - Nxy.y*dNXdy) / denom;
+	float gradT = sqrt(dTdx * dTdx + dTdy * dTdy) + 1e-5;
 
-	float lineOutA = 1.0 - smoothstep(halfWidthA - 0.5, halfWidthA + 0.5, pixelDistA);
+	float fR = angle * freqA;
+	float d = abs(frac(fR) - 0.5);
+	float pixelDist = d / (gradT * freqA);
+	
+	float lineOutA = 1.0 - smoothstep(halfWidthA - 0.5, halfWidthA + 0.5, pixelDist);
 
 	/* FINAL COLOR */
-	float vis = colorTexture.Sample(samplerState, input.uv).r;
 	float vis2 = (vis > 0.73) ? 0 : 1;
 	vis = (vis > 0.99999) ? 0 : 1;
 
