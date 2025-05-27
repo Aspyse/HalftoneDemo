@@ -16,7 +16,7 @@ cbuffer LightBuffer : register(b1)
 {
 	float4x4 lightViewProj;
 	float3 lightDirectionVS;
-	float pad0;
+	float celThreshold; // unused but kept for substitutability
 	float3 lightColor;
 	float pad1;
 	float3 ambientColor;

@@ -20,7 +20,7 @@ private:
 	{
 		XMMATRIX lightViewProj;
 		XMFLOAT3 lightDirectionVS;
-		float pad0;
+		float celThreshold;
 		XMFLOAT3 lightColor;
 		float pad1;
 		XMFLOAT3 ambientColor;

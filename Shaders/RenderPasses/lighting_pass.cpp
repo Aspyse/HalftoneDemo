@@ -66,6 +66,7 @@ bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 
 	dataPtr2->lightViewProj = XMMatrixTranspose(lightViewProj);
 	dataPtr2->lightDirectionVS = lightDirectionVS;
+	dataPtr2->celThreshold = celThreshold;
 	dataPtr2->lightColor = lightColor;
 	dataPtr2->ambientColor = ambientLight;
 

@@ -197,11 +197,10 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	/* LIGHTING PASS */
 	/* CONSTANT BUFFER PARAMETERS*/
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
-	float celThreshold = 0.0f;
 
 	// TODO: IMPORTANT! REFACTOR
 	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
-		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, celThreshold);
+		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
 
 	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
 		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, 0, rParams.edgeThreshold);
@@ -230,20 +229,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	return true;
 }
 
-void RenderSystem::Shutdown()
-{
-	ImGui_ImplDX11_Shutdown();
-	if (m_depthStencilState)
-	{
-		m_depthStencilState->Release();
-		m_depthStencilState = nullptr;
-	}
-
-	CleanupDepthBuffer();
-	CleanupRenderTarget();
-	CleanupDeviceD3D();
-}
-
 void RenderSystem::Resize(UINT width, UINT height)
 {
 	m_screenWidth = width;
@@ -261,13 +246,29 @@ void RenderSystem::Resize(UINT width, UINT height)
 	// TODO: IMPORTANT! AUTOMATE
 	for (auto& target : m_targets)
 	{
-		target->Initialize(m_device, m_screenWidth, m_screenHeight);
+		if (target->GetNumViews() == 1) // TODO: fix this nasty workaround
+			target->Initialize(m_device, m_screenWidth, m_screenHeight);
 	}
 	m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
 
 	AssignTargets();
 
 	ResetViewport(m_screenWidth, m_screenHeight);
+}
+
+
+void RenderSystem::Shutdown()
+{
+	ImGui_ImplDX11_Shutdown();
+	if (m_depthStencilState)
+	{
+		m_depthStencilState->Release();
+		m_depthStencilState = nullptr;
+	}
+
+	CleanupDepthBuffer();
+	CleanupRenderTarget();
+	CleanupDeviceD3D();
 }
 
 ID3D11Device* RenderSystem::GetDevice() // For model

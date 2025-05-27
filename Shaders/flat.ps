@@ -16,7 +16,7 @@ cbuffer LightBuffer : register(b1)
 {
 	float4x4 lightViewProj;
 	float3 lightDirectionVS;
-	float pad0;
+	float celThreshold;
 	float3 lightColor;
 	float pad1;
 	float3 ambientColor;
@@ -124,7 +124,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 
 	// cel step
 	specular = (specular > 0.5) ? 1.0 : 0.0;
-	diffuse = (NdotL > 0.5) ? diffuse : 0.0; // TODO: add cel threshold param
+	diffuse = (NdotL > celThreshold) ? diffuse : 0.0; // TODO: add cel threshold param
 
     float3 color = (diffuse + specular) * lightColor * vis;
 

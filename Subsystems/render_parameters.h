@@ -16,7 +16,7 @@ struct RenderParameters
     float ambientStrength;
 
     RenderParameters() :
-        celThreshold(0.4f),
+        celThreshold(0.5f),
         roughness(0.16f),
         albedoColor{ 1.0f, 0.25f, 0.0f },
         halftoneDotSize(6),
