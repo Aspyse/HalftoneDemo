@@ -9,7 +9,7 @@ struct RenderParameters
     float albedoColor[3];
     int halftoneDotSize;
     float edgeThreshold;
-    bool isFeather;
+    float inkColor[3];
 
     float lightDirection[3];
     float clearColor[3];
@@ -21,7 +21,7 @@ struct RenderParameters
         albedoColor{ 1.0f, 0.25f, 0.0f },
         halftoneDotSize(6),
         edgeThreshold(0.25),
-        isFeather(false),
+        inkColor{ 0.0f, 0.0f, 0.0f },
         lightDirection{ 1.0f, -1.0f, 1.0f },
         clearColor{ 0.9f, 1.0f, 1.0f },
         ambientStrength(0.8f)

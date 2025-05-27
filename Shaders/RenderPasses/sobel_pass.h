@@ -23,7 +23,7 @@ private:
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, bool, bool, float);
+	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, bool, float, float*);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

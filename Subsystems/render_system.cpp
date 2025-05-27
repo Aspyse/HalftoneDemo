@@ -203,7 +203,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
 
 	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
-		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.isFeather, rParams.edgeThreshold);
+		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor);
 
 	//if (auto* hp = dynamic_cast<HalftonePass*>(m_passes[1].get()))
 		//hp->SetShaderParameters(m_deviceContext, rParams.halftoneDotSize, m_screenWidth, m_screenHeight);

@@ -53,6 +53,7 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 		ImGui::DragFloat("Roughness", &rParams.roughness, 0.002f, 0, 1);
 		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.5f, 1, 50);
 		ImGui::DragFloat("Edge Threshold", &rParams.edgeThreshold, 0.002f, 0, 1);
+		ImGui::ColorEdit3("Ink Color", rParams.inkColor);
 
 		ImGui::Separator();
 

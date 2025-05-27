@@ -73,7 +73,7 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 
     edge = (threshold > 0) ? step(threshold, edge) : edge;
 
-    edge *= inkColor;
+    float3 color = edge * inkColor;
 
-    return float4(1-edge, 1-edge, 1-edge, edge);
+    return float4(color, edge);
 }
