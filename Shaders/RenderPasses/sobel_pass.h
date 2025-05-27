@@ -16,10 +16,10 @@ private:
 	{
 		int isScharr;
 		XMFLOAT2 offset;
-		int isFeather;
 		float threshold;
+		XMFLOAT3 inkColor;
 
-		float padding[3];
+		float pad0;
 	};
 
 public:

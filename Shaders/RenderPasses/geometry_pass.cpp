@@ -340,6 +340,8 @@ void GeometryPass::Shutdown()
 
 bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness)
 {
+    roughness *= roughness;
+    
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(result))
@@ -494,7 +496,7 @@ bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCou
     XMVECTOR up = XMVectorSet(0, 1, 0, 0);
     XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
-    XMMATRIX lightProj = XMMatrixOrthographicLH(0.8f, 0.8f, 0.03f, 5.0f); // Adjust
+    XMMATRIX lightProj = XMMatrixOrthographicLH(0.8f, 0.8f, 0.01f, 5.0f); // Adjust
 
     m_lightViewProj = XMMatrixMultiply(lightView, lightProj);
     

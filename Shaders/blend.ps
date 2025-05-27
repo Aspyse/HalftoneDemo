@@ -14,6 +14,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	float4 fg = fgTexture.Sample(samplerState, input.uv);
 
 	float3 color = bg * (1 - fg.a) + fg.rgb * fg.a;
-	
+	/*fg = 1 - fg;
+	float3 color = bg - fg;*/
 	return float4(color, 1);
 }

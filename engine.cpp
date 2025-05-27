@@ -27,7 +27,7 @@ bool Engine::Initialize()
 
 	m_camera = new CameraClass;
 	float aspect = static_cast<float>(width) / static_cast<float>(height);
-	m_camera->Initialize(30, aspect, 0.3f, 100.0f);
+	m_camera->Initialize(30, aspect, 0.1f, 100.0f);
 	m_camera->SetPosition(0.0f, 0.1f, -1.0f);
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
 	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);

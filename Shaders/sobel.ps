@@ -31,10 +31,10 @@ cbuffer SobelBuffer : register(b0)
 {
 	bool isScharr;
     float2 offset; // (1 / subdivisions)
-    bool isFeather;
     float threshold; // 0 = don't use
+    float3 inkColor;
 
-    float3 pad;
+    float pad0;
 };
 
 struct PixelInputType
@@ -71,10 +71,9 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 
     float edge = sqrt(gx*gx + gy*gy);
 
-    if (threshold > 0)
-    {
-        edge = (edge >= threshold) ? 1: 0;
-    }
+    edge = (threshold > 0) ? step(threshold, edge) : edge;
+
+    edge *= inkColor;
 
     return float4(1-edge, 1-edge, 1-edge, edge);
 }
