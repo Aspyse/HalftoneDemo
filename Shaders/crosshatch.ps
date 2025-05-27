@@ -2,7 +2,15 @@ Texture2D colorTexture : register(t0);
 Texture2D normalTexture : register(t1);
 SamplerState samplerState : register(s0);
 
+cbuffer CrosshatchBuffer : register(b0)
+{
+	float2 offset;
+	float thicknessMul;
+	float topoFreqMul;
+	float radFreqMul;
 
+	float3 pad0;
+};
 
 struct PixelInputType
 {
@@ -10,26 +18,27 @@ struct PixelInputType
 	float4 position : SV_POSITION;
 };
 
+// Manually calibrated values
+static const float wH = 32;
+static const float baseFreqH = 8;
+
+static const float wA = 1;
+static const float baseFreqA = 4;
+
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
     float vis = colorTexture.Sample(samplerState, input.uv).r;
 
-	float artistThicknessMul = 1.1;
+	float halfWidthH = wH * 0.5 * thicknessMul;
+	float halfWidthA = wA * 0.5 * thicknessMul;
 
-	static const float wH = 32;
-	static const float freqH = 8;
-
-	static const float wA = 1;
-	static const float freqA = 4;
-
-
-	float halfWidthA = wA * 0.5 * artistThicknessMul;
-	float halfWidthH = wH * 0.5 * artistThicknessMul;
+	float freqH = baseFreqH * topoFreqMul;
+	float freqA = baseFreqA * radFreqMul;
 	
 	static float2 textureSize;
 	colorTexture.GetDimensions(textureSize.x, textureSize.y);
 
-	float2 texelSize = float2(1.0, 1.0) / textureSize;
+	float2 offset = float2(1.0, 1.0) / textureSize;
 
 	float3 normal = normalTexture.SampleLevel(samplerState, input.uv, 0).rgb * 2 - 1;
 
@@ -37,10 +46,10 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 	// TODO: consider sobel
 	float h = acos(normal.b);
 
-	float3 nLeft  = normalTexture.Sample(samplerState, input.uv - float2(texelSize.x, 0)).rgb;
-	float3 nRight = normalTexture.Sample(samplerState, input.uv + float2(texelSize.x, 0)).rgb;
-	float3 nUp    = normalTexture.Sample(samplerState, input.uv + float2(0, texelSize.y)).rgb;
-	float3 nDown  = normalTexture.Sample(samplerState, input.uv - float2(0, texelSize.y)).rgb;
+	float3 nLeft  = normalTexture.Sample(samplerState, input.uv - float2(offset.x, 0)).rgb;
+	float3 nRight = normalTexture.Sample(samplerState, input.uv + float2(offset.x, 0)).rgb;
+	float3 nUp    = normalTexture.Sample(samplerState, input.uv + float2(0, offset.y)).rgb;
+	float3 nDown  = normalTexture.Sample(samplerState, input.uv - float2(0, offset.y)).rgb;
 
 	float dNdx = (acos(nRight.b) - acos(nLeft.b)) * 0.5;  
 	float dNdy = (acos(nUp.b)    - acos(nDown.b)) * 0.5;

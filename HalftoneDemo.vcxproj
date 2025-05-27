@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Classes\camera.cpp" />
+    <ClCompile Include="Shaders\RenderPasses\crosshatch_pass.cpp" />
     <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp" />
     <ClCompile Include="Shaders\RenderPasses\lighting_pass.cpp" />
     <ClCompile Include="Classes\model.cpp" />

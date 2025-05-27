@@ -226,6 +226,9 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
 		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
 
+	if (auto* sp = dynamic_cast<CrosshatchPass*>(m_passes[1].get()))
+		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, 1, 1);
+
 	/* DISABLE
 	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
 		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor);
