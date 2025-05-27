@@ -21,7 +21,7 @@ struct RenderParameters
         albedoColor{ 1.0f, 0.25f, 0.0f },
         halftoneDotSize(6),
         edgeThreshold(0.07),
-        lightDirection{ 1.0f, -1.0f, -1.0f },
+        lightDirection{ 1.0f, -1.0f, 1.0f },
         clearColor{ 0.9f, 1.0f, 1.0f },
         ambientStrength(0.8f)
     {}

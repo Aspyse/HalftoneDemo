@@ -91,6 +91,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_targets.push_back(std::move(lightingOut)); // target 0
 
 	auto depthIn = std::make_unique<RenderTarget>();
+	depthIn->Initialize(m_device, m_screenWidth, m_screenHeight);
 	m_targets.push_back(std::move(depthIn)); // target 1
 
 	auto sobelOut = std::make_unique<RenderTarget>();
@@ -98,8 +99,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_targets.push_back(std::move(sobelOut)); // target 2
 
 	auto blendIn = std::make_unique<RenderTarget>();
-	//blendIn->Initialize(m_device, m_screenWidth, m_screenWidth);
-	ID3D11ShaderResourceView* empty = nullptr;
+	ID3D11ShaderResourceView* empty[2] = { nullptr, nullptr };
 	blendIn->SetResource(empty, 2);
 	m_targets.push_back(std::move(blendIn)); // target 3
 
@@ -183,7 +183,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
 	m_gBuffer[3] = m_geometryPass->GetShadowMap();
 
-	m_targets[1]->SetResource(m_gBuffer[2], 1); // Pick up depth buffer
+	m_targets[1]->SetResource(m_gBuffer[2]); // Pick up depth buffer
 
 
 	ID3D11ShaderResourceView* blendResources[2] = {

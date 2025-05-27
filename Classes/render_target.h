@@ -2,7 +2,9 @@
 
 #include "d3d11.h"
 #include <wrl/client.h>
+#include <vector>
 
+using std::vector;
 using Microsoft::WRL::ComPtr;
 
 class RenderTarget
@@ -16,17 +18,33 @@ public:
         return true;
     }
 
-    bool SetResource(ID3D11ShaderResourceView* resource, UINT numViews)
+    bool SetResource(ID3D11ShaderResourceView* resource)
     {
-        m_resource = resource;
-        m_numViews = numViews;
+        return SetResource(&resource, 1);
+    }
+    bool SetResource(ID3D11ShaderResourceView* const* resources, UINT numViews)
+    {
+        m_resources.clear();
+        m_resourcePointers.clear();
+
+        for (UINT i = 0; i < numViews; ++i)
+        {
+            if (resources[i])
+                m_resources.emplace_back(resources[i]);
+            else
+                m_resources.push_back(nullptr);
+            
+            m_resourcePointers.push_back(m_resources.back().Get());
+        }
+
         return true;
     }
 
 	bool Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 	{
         m_target.Reset();
-        m_resource.Reset();
+        m_resources.clear();
+        m_resourcePointers.clear();
         
         D3D11_TEXTURE2D_DESC td;
         ZeroMemory(&td, sizeof(td));
@@ -45,14 +63,18 @@ public:
             return false;
 
         // RTV
-        device->CreateRenderTargetView(texture.Get(), nullptr, m_target.GetAddressOf());
+        result = device->CreateRenderTargetView(texture.Get(), nullptr, m_target.GetAddressOf());
         if (FAILED(result))
             return false;
 
         // SRV
-        device->CreateShaderResourceView(texture.Get(), nullptr, m_resource.GetAddressOf());
+        ComPtr<ID3D11ShaderResourceView> tempResource;
+        result = device->CreateShaderResourceView(texture.Get(), nullptr, &tempResource);
         if (FAILED(result))
             return false;
+
+        m_resources.push_back(tempResource);
+        m_resourcePointers.push_back(tempResource.Get());
 
         return true;
 	}
@@ -63,18 +85,18 @@ public:
         return m_target.Get();
     }
 
-    ID3D11ShaderResourceView** GetResource()
+    ID3D11ShaderResourceView* const* GetResource()
     {
-        return m_resource.GetAddressOf();
+        return m_resourcePointers.data();
     }
 
     UINT GetNumViews()
     {
-        return m_numViews;
+        return static_cast<UINT>(m_resourcePointers.size());
     }
 
 private:
     ComPtr<ID3D11RenderTargetView> m_target;
-    ComPtr<ID3D11ShaderResourceView> m_resource;
-    UINT m_numViews = 1; // Number of resource views
+    vector<ComPtr<ID3D11ShaderResourceView>> m_resources;
+    vector<ID3D11ShaderResourceView*> m_resourcePointers;
 };
