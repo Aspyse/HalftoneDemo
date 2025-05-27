@@ -1,4 +1,4 @@
-Texture2D inputTexture : register(t0); // typically depth
+Texture2D inputTexture : register(t0); // typically depth but normal.b is cool too
 SamplerState samplerState : register(s0);
 
 // Sobel kernels
@@ -46,7 +46,7 @@ struct PixelInputType
 float Fetch(float2 uv)
 {
     float4 depth = inputTexture.Sample(samplerState, uv);
-    return depth.r;
+    return depth.b;
 }
 
 float4 PostprocessShader(PixelInputType input) : SV_Target

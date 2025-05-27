@@ -1,6 +1,15 @@
 Texture2D inputTexture : register(t0); // must be VS normal
 SamplerState samplerState : register(s0);
 
+cbuffer SobelBuffer : register(b0)
+{
+    float3 inkColor;
+    float threshold; // 0 = don't use
+    float2 offset; // (1 / subdivisions)
+
+    float pad0;
+};
+
 struct PixelInputType
 {
 	float2 uv : TEXCOORD0;
@@ -9,18 +18,25 @@ struct PixelInputType
 
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
-    float3 N = normalize(inputTexture.Sample(samplerState, input.uv) * 2 - 1);
+    //float3 N = normalize(inputTexture.Sample(samplerState, input.uv) * 2 - 1);
     
-    float3 dNdx = ddx(N);
-    float3 dNdy = ddy(N);
-    
-    float edge = sqrt(dot(dNdx, dNdx) + dot(dNdx, dNdx));
-    edge *= 100;
-    
-    // optional: gamma-correct or pow for stylized falloff
-    //edge = pow(edge, 0.75);
-    // TODO: threshold parameter
-    //edge = (edge < 0.2) ? 0 : 1;
-    
-    return float4(1-edge, 1-edge, 1-edge, 1);
+    static float2 textureSize;
+	inputTexture.GetDimensions(textureSize.x, textureSize.y);
+	float2 texelSize = float2(1.0, 1.0) / textureSize;
+
+	float3 nLeft  = normalTexture.Sample(samplerState, input.uv - float2(offset.x, 0)).rgb;
+	float3 nRight = normalTexture.Sample(samplerState, input.uv + float2(offset.x, 0)).rgb;
+	float3 nUp    = normalTexture.Sample(samplerState, input.uv + float2(0, offset.y)).rgb;
+	float3 nDown  = normalTexture.Sample(samplerState, input.uv - float2(0, offset.y)).rgb;
+
+	float3 dNdx = (nRight - nLeft) * 0.5;  
+	float3 dNdy = (nUp    - nDown) * 0.5;
+
+	float edge = sqrt(dot(dNdx, dNdx) + dot(dNdy, dNdy));
+
+	edge = (threshold > 0) ? step(threshold, edge) : edge;
+	
+	float3 color = edge * inkColor;
+
+	return float4(color, edge);
 }

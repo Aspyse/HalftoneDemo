@@ -2,6 +2,7 @@
 #include "halftone_pass.h"
 #include "sobel_pass.h"
 #include "blend_pass.h"
+#include "crosshatch_pass.h"
 
 #include "render_system.h"
 #include "imgui_impl_dx11.h"
@@ -90,19 +91,25 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	lightingOut->Initialize(m_device, m_screenWidth, m_screenHeight);
 	m_targets.push_back(std::move(lightingOut)); // target 0
 
+	/* DISABLE
 	auto depthIn = std::make_unique<RenderTarget>();
 	depthIn->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(depthIn)); // target 1
+	//m_targets.push_back(std::move(depthIn)); // target 1
 
 	auto sobelOut = std::make_unique<RenderTarget>();
 	sobelOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(sobelOut)); // target 2
+	//m_targets.push_back(std::move(sobelOut)); // target 2
 
 	auto blendIn = std::make_unique<RenderTarget>();
 	ID3D11ShaderResourceView* empty[2] = { nullptr, nullptr };
 	blendIn->SetResource(empty, 2);
-	m_targets.push_back(std::move(blendIn)); // target 3
+	//m_targets.push_back(std::move(blendIn)); // target 3
+	*/
 
+	auto crosshatchIn = std::make_unique<RenderTarget>();
+	ID3D11ShaderResourceView* empty2[2] = { nullptr, nullptr };
+	crosshatchIn->SetResource(empty2, 2);
+	m_targets.push_back(std::move(crosshatchIn));
 
 
 	/* RENDER PASSES */
@@ -110,14 +117,14 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
 	auto lightingPass = std::make_unique<LightingPass>();
-	lightingPass->Initialize(m_device, L"Shaders/flat.ps");
+	lightingPass->Initialize(m_device, L"Shaders/base.ps");
 	lightingPass->Begin = [this, shadowSampler]()
 	{
 		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
 	};
 	m_passes.push_back(std::move(lightingPass)); // pass 0
 
-
+	/* DISABLE
 	auto sobelPass = std::make_unique<SobelPass>();
 	sobelPass->Initialize(m_device, L"Shaders/sobel.ps");
 	m_passes.push_back(std::move(sobelPass)); // pass 1
@@ -126,6 +133,11 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	auto blendPass = std::make_unique<BlendPass>();
 	blendPass->Initialize(m_device, L"Shaders/blend.ps");
 	m_passes.push_back(std::move(blendPass)); // pass 2
+	*/
+
+	auto crosshatchPass = std::make_unique<CrosshatchPass>();
+	crosshatchPass->Initialize(m_device, L"Shaders/crosshatch.ps");
+	m_passes.push_back(std::move(crosshatchPass));
 
 	AssignTargets();
 
@@ -137,11 +149,15 @@ bool RenderSystem::AssignTargets()
 	m_passes[0]->AssignShaderResource(m_gBuffer, 4);
 	m_passes[0]->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
 
+	/* DISABLE
 	m_passes[1]->AssignShaderResource(m_targets[1]->GetResource(), m_targets[1]->GetNumViews());
 	m_passes[1]->AssignRenderTarget(m_targets[2]->GetTarget(), 1, nullptr);
 
 	m_passes[2]->AssignShaderResource(m_targets[3]->GetResource(), m_targets[3]->GetNumViews());
 	m_passes[2]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
+	*/
+	m_passes[1]->AssignShaderResource(m_targets[1]->GetResource(), m_targets[1]->GetNumViews());
+	m_passes[1]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
 
 	return true;
 }
@@ -183,7 +199,15 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
 	m_gBuffer[3] = m_geometryPass->GetShadowMap();
 
-	m_targets[1]->SetResource(m_gBuffer[2]); // Pick up depth buffer
+	ID3D11ShaderResourceView* blendResources2[2] = {
+		m_targets[0]->GetResource()[0],
+		m_geometryPass->GetGBuffer(1)
+	};
+
+	m_targets[1]->SetResource(blendResources2, 2);
+
+	/* DISABLE
+	m_targets[1]->SetResource(m_gBuffer[1]); // Pick up depth buffer
 
 
 	ID3D11ShaderResourceView* blendResources[2] = {
@@ -192,7 +216,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	};
 
 	m_targets[3]->SetResource(blendResources, 2);
-
+	*/
 
 	/* LIGHTING PASS */
 	/* CONSTANT BUFFER PARAMETERS*/
@@ -202,12 +226,10 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
 		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
 
+	/* DISABLE
 	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
 		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor);
-
-	//if (auto* hp = dynamic_cast<HalftonePass*>(m_passes[1].get()))
-		//hp->SetShaderParameters(m_deviceContext, rParams.halftoneDotSize, m_screenWidth, m_screenHeight);
-
+	*/
 
 
 	/* FORWARD RENDER */

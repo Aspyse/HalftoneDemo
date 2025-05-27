@@ -37,7 +37,7 @@ bool Engine::Initialize()
 
 	// FOR TESTING: create model
 	auto model = std::make_unique<ModelClass>();
-	model->Initialize(m_renderSystem->GetDevice(), "Models/dragon_vrip.ply");
+	model->Initialize(m_renderSystem->GetDevice(), "Models/bun_zipper.ply");
 	m_models.push_back(std::move(model));
 
 	return true; // TEMP

@@ -43,6 +43,7 @@
   <ItemGroup>
     <ClInclude Include="Classes\camera.h" />
     <ClInclude Include="Shaders\RenderPasses\blend_pass.h" />
+    <ClInclude Include="Shaders\RenderPasses\crosshatch_pass.h" />
     <ClInclude Include="Shaders\RenderPasses\halftone_pass.h" />
     <ClInclude Include="Shaders\RenderPasses\lighting_pass.h" />
     <ClInclude Include="Classes\model.h" />
@@ -69,6 +70,7 @@
     <None Include="Shaders\base.ps" />
     <None Include="Shaders\base.vs" />
     <None Include="Shaders\blend.ps" />
+    <None Include="Shaders\crosshatch.ps" />
     <None Include="Shaders\geometry.ps" />
     <None Include="Shaders\geometry.vs" />
     <None Include="Shaders\halftone.ps" />

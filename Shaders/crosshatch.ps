@@ -1,0 +1,85 @@
+Texture2D colorTexture : register(t0);
+Texture2D normalTexture : register(t1);
+SamplerState samplerState : register(s0);
+
+static const int   RING_COUNT   = 10;    // how many concentric bands
+static const float RING_WIDTH   = 0.25;  // thickness of each ring (0–0.5)
+static const int   SPOKE_COUNT  = 80;    // how many spokes around the sphere
+static const float SPOKE_WIDTH  = 0.2;  // thickness of each spoke (0–0.5)
+static const float2 CENTER       = float2(0.5, 0.5);  // center of projection in UV
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};
+
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+    static const float wH = 30; // 30
+	static const float wA = 10; // 10
+	static const float freqH = 10; // 10 is good
+	static const float freqA = 8; // 8
+
+	float halfWidthA = wA * 0.5;
+	float halfWidthH = wH * 0.5;
+	
+	static float2 textureSize;
+	colorTexture.GetDimensions(textureSize.x, textureSize.y);
+
+	float2 texelSize = float2(1.0, 1.0) / textureSize;
+
+	float3 normal = normalTexture.SampleLevel(samplerState, input.uv, 0).rgb * 2 - 1;
+
+	/* TOPO LINES */
+	// TODO: consider sobel
+	float h = acos(normal.b);
+
+	float3 nLeft  = normalTexture.Sample(samplerState, input.uv - float2(texelSize.x, 0)).rgb;
+	float3 nRight = normalTexture.Sample(samplerState, input.uv + float2(texelSize.x, 0)).rgb;
+	float3 nUp    = normalTexture.Sample(samplerState, input.uv + float2(0, texelSize.y)).rgb;
+	float3 nDown  = normalTexture.Sample(samplerState, input.uv - float2(0, texelSize.y)).rgb;
+
+	float dNdx = (acos(nRight.b) - acos(nLeft.b)) * 0.5;  
+	float dNdy = (acos(nUp.b)    - acos(nDown.b)) * 0.5;
+
+	float2 gradH = float2(dNdx, dNdy);
+	float distTopo = frac(h * freqH) - 0.5;
+
+	float spacingH = 1.0 / freqH;
+	float valH = frac(h * freqH);
+	float dH = abs(valH - 0.5);
+	float gradMagH = length(gradH);
+	float pixelDistH = dH / (gradMagH + 1e-5);
+
+	float lineOutH = 1.0 - smoothstep(halfWidthH - 0.5, halfWidthH + 0.5, pixelDistH);
+
+	/* RADIAL LINES */
+	float angle = atan2(normal.g, normal.r);
+
+	float dAdx = (atan2(nRight.g, nRight.r) - atan2(nLeft.g, nLeft.r));
+	float dAdy = (atan2(nUp.g, nUp.r) - atan2(nDown.g, nDown.r));
+
+	float2 gradA = float2(dAdx, dAdy);
+	float distRad = frac(angle * freqA) - 0.5;
+
+	float spacingA = 1.0 / freqA;
+	float valA = frac(angle * freqA);
+	float dA = abs(valA - 0.5);
+	float gradMagA = length(gradA);
+	float pixelDistA = dA / (gradMagA + 1e-5);
+
+	float lineOutA = 1.0 - smoothstep(halfWidthA - 0.5, halfWidthA + 0.5, pixelDistA);
+
+	/* FINAL COLOR */
+	float vis = colorTexture.Sample(samplerState, input.uv).r;
+	float vis2 = (vis > 0.73) ? 0 : 1;
+	vis = (vis > 0.99999) ? 0 : 1;
+
+	float color = 1;
+	color -= lineOutH * vis2;
+	color -= lineOutA * vis;
+	color = saturate(color);
+	
+    return float4(color, color, color, 1);
+}
