@@ -27,7 +27,7 @@ bool Engine::Initialize()
 
 	m_camera = new CameraClass;
 	float aspect = static_cast<float>(width) / static_cast<float>(height);
-	m_camera->Initialize(30, aspect, 0.3f, 100.0f);
+	m_camera->Initialize(30, aspect, 0.1f, 100.0f);
 	m_camera->SetPosition(0.0f, 0.1f, -1.0f);
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
 	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);
@@ -37,7 +37,7 @@ bool Engine::Initialize()
 
 	// FOR TESTING: create model
 	auto model = std::make_unique<ModelClass>();
-	model->Initialize(m_renderSystem->GetDevice(), "Models/dragon_vrip.ply");
+	model->Initialize(m_renderSystem->GetDevice(), "Models/bun_zipper.ply");
 	m_models.push_back(std::move(model));
 
 	return true; // TEMP

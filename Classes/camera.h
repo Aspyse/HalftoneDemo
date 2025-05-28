@@ -33,8 +33,8 @@ public:
 	XMMATRIX GetProjectionMatrix() const;
 
 private:
-	const float ORBIT_SENSITIVITY = 0.2f;
-	const float PAN_SENSITIVITY = 0.0005f;
+	const float ORBIT_SENSITIVITY = 0.23f;
+	const float PAN_SENSITIVITY = 0.0006f;
 	const float ZOOM_SENSITIVITY = 0.0005f;
 
 	XMFLOAT3 m_position = { 0.0f, 0.0f, 0.0f };

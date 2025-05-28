@@ -58,8 +58,8 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
 	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
 	float3 normal = normalize(nr.rgb * 2 - 1);
-	float rough = max(nr.a, 0.05);
-	float alpha = rough * rough; // artist control
+	float alpha = max(nr.a, 0.01);
+	//float alpha = rough * rough; // artist control
 
 	float3 viewPos = ReconstructViewPos(input.uv);
 	float3 V = normalize(-viewPos);
@@ -82,7 +82,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	/* SHADOW MAPPING */
 	float4 worldPos = mul(float4(viewPos,1), invView);
 	float vis = 1;
-	vis = ShadowVisibility(worldPos);
+	//vis = ShadowVisibility(worldPos);
 
 	/* COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory */
 	float NdotL = saturate(dot(normal, L));

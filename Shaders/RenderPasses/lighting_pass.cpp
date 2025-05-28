@@ -36,7 +36,7 @@ bool LightingPass::InitializeConstantBuffer(ID3D11Device* device)
 	return true;
 }
 
-bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 lightColor, float* ambientColor, float ambientStrength, float celThreshold)
+bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, float* ambientColor, float ambientStrength, float celThreshold)
 {
 	XMMATRIX invProj = XMMatrixInverse(nullptr, projectionMatrix);
 	XMMATRIX invView = XMMatrixInverse(nullptr, viewMatrix);
@@ -54,9 +54,7 @@ bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
 
 	XMFLOAT3 ambientLight = XMFLOAT3(ambientColor[0] * ambientStrength, ambientColor[1] * ambientStrength, ambientColor[2] * ambientStrength);
-	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirection, viewMatrix);
-	XMFLOAT3 lightDirectionVS;
-	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
+
 
 	result = deviceContext->Map(m_constantBuffers[1].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))

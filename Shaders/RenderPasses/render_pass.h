@@ -79,7 +79,7 @@ public:
 		for (UINT i = 0; i < m_constantBuffers.size(); ++i)
 			deviceContext->PSSetConstantBuffers(i, 1, m_constantBuffers[i].GetAddressOf());
 
-		deviceContext->PSSetShaderResources(0, m_numResourceViews, m_shaderResource); // check if working
+		deviceContext->PSSetShaderResources(0, m_numResourceViews, m_shaderResource);
 
 		deviceContext->ClearRenderTargetView(m_renderTarget, clearColor);
 		if (m_dsv)

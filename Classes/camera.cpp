@@ -92,6 +92,9 @@ void CameraClass::Orbit(float x, float y)
 
 void CameraClass::Pan(float x, float y)
 {
+	x *= m_distance;
+	y *= m_distance;
+	
 	// Convert degrees to radians
 	float yawRad = XMConvertToRadians(m_yaw);
 	float pitchRad = XMConvertToRadians(m_pitch);
@@ -121,6 +124,7 @@ void CameraClass::Pan(float x, float y)
 
 void CameraClass::Zoom(float delta)
 {
+	delta *= m_distance;
 	m_distance += delta;
 	if (m_distance < 0.01f)
 		m_distance = 0.01f;

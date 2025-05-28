@@ -10,10 +10,11 @@ struct PixelInputType
 
 float4 PostprocessShader(PixelInputType input) : SV_TARGET
 {
-	float3 bg = bgTexture.Sample(samplerState, input.uv);
+	float4 bg = bgTexture.Sample(samplerState, input.uv);
 	float4 fg = fgTexture.Sample(samplerState, input.uv);
 
-	float3 color = bg * (1 - fg.a) + fg.rgb * fg.a;
-	
-	return float4(color, 1);
+	float3 color = bg.rgb * (1 - fg.a) + fg.rgb * fg.a;
+	/*fg = 1 - fg;
+	float3 color = bg - fg;*/
+	return float4(color,1);
 }

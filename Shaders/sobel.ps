@@ -1,4 +1,4 @@
-Texture2D inputTexture : register(t0); // typically depth
+Texture2D inputTexture : register(t0); // typically depth but normal.b is cool too
 SamplerState samplerState : register(s0);
 
 // Sobel kernels
@@ -31,10 +31,13 @@ cbuffer SobelBuffer : register(b0)
 {
 	bool isScharr;
     float2 offset; // (1 / subdivisions)
-    bool isFeather;
     float threshold; // 0 = don't use
 
-    float3 pad;
+    float3 inkColor;
+    float pad0;
+
+    float3 clearColor;
+	float pad1;
 };
 
 struct PixelInputType
@@ -71,10 +74,9 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 
     float edge = sqrt(gx*gx + gy*gy);
 
-    if (threshold > 0)
-    {
-        edge = (edge >= threshold) ? 1: 0;
-    }
+    edge = (threshold > 0) ? step(threshold, edge) : edge;
 
-    return float4(1-edge, 1-edge, 1-edge, edge);
+    float3 color = (edge * inkColor) + ((1-edge) * clearColor);
+
+    return float4(color, edge);
 }
