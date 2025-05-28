@@ -49,11 +49,26 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 
 		ImGui::ColorEdit3("Albedo Color", rParams.albedoColor);
-		ImGui::DragFloat("Cel Threshold", &rParams.celThreshold, 0.002f, 0, 1);
 		ImGui::DragFloat("Roughness", &rParams.roughness, 0.002f, 0, 1);
+		ImGui::DragFloat("Cel Threshold", &rParams.celThreshold, 0.002f, -1, 1);
+
+		ImGui::Separator();
+
 		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.5f, 1, 50);
+
+		ImGui::Separator();
+
 		ImGui::DragFloat("Edge Threshold", &rParams.edgeThreshold, 0.002f, 0, 2);
 		ImGui::ColorEdit3("Ink Color", rParams.inkColor);
+
+		ImGui::Separator();
+
+		ImGui::DragFloat("Crosshatch Threshold A", &rParams.thresholdA, 0.002f, -1, 1);
+		ImGui::DragFloat("Crosshatch Threshold B", &rParams.thresholdB, 0.002f, -1, 1);
+		ImGui::DragFloat("Crosshatch Thickness", &rParams.thicknessMul, 0.002f, 0, 10);
+		ImGui::DragFloat("Crosshatch Density", &rParams.densityMul, 0.002f, 0, 3);
+		ImGui::SliderAngle("Crosshatch Angle", &rParams.hatchAngle, 0.0f, 360.0f);
+		ImGui::Checkbox("Feather Crosshatch?", &rParams.isFeather);
 
 		ImGui::Separator();
 

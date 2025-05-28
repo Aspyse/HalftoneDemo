@@ -4,6 +4,8 @@
 #include <DirectXMath.h>
 
 using DirectX::XMFLOAT2;
+using DirectX::XMFLOAT3;
+using DirectX::XMVECTOR;
 
 class CrosshatchPass : public RenderPass
 {
@@ -13,13 +15,22 @@ private:
 		XMFLOAT2 offset;
 		float thicknessMul;
 		float topoFreqMul;
-		float radFreqMul;
 
-		float pad[3];
+		XMFLOAT3 lightDirectionVS;
+		float thresholdA;
+
+		XMFLOAT3 inkColor;
+		float thresholdB;
+
+		XMFLOAT3 clearColor;
+		float hatchAngle;
+
+		int isFeather;
+		float padding[3];
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, float, float, float);
+	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, float, float, XMFLOAT3, float*, float, float, float*, float, bool);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

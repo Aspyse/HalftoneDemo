@@ -5,7 +5,6 @@
 
 using DirectX::XMMATRIX;
 using DirectX::XMFLOAT3;
-using DirectX::XMVECTOR;
 
 class LightingPass : public RenderPass
 {
@@ -28,7 +27,7 @@ private:
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, float*, float, float);
+	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, XMFLOAT3, float*, float, float);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

@@ -17,13 +17,16 @@ private:
 		int isScharr;
 		XMFLOAT2 offset;
 		float threshold;
-		XMFLOAT3 inkColor;
 
+		XMFLOAT3 inkColor;
 		float pad0;
+
+		XMFLOAT3 clearColor;
+		float pad1;
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, bool, float, float*);
+	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, bool, float, float*, float*);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

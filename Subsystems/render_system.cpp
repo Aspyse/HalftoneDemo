@@ -87,57 +87,38 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 
 	/* RENDER TARGETS */
 	// Stored in vector for management (TODO)
-	auto lightingOut = std::make_unique<RenderTarget>();
-	lightingOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(lightingOut)); // target 0
-
-	/* DISABLE
-	auto depthIn = std::make_unique<RenderTarget>();
-	depthIn->Initialize(m_device, m_screenWidth, m_screenHeight);
-	//m_targets.push_back(std::move(depthIn)); // target 1
+	auto crosshatchOut = std::make_unique<RenderTarget>();
+	crosshatchOut->Initialize(m_device, m_screenWidth, m_screenHeight);
+	m_targets.push_back(std::move(crosshatchOut)); // target 0
 
 	auto sobelOut = std::make_unique<RenderTarget>();
 	sobelOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	//m_targets.push_back(std::move(sobelOut)); // target 2
+	m_targets.push_back(std::move(sobelOut)); // target 0
 
 	auto blendIn = std::make_unique<RenderTarget>();
 	ID3D11ShaderResourceView* empty[2] = { nullptr, nullptr };
 	blendIn->SetResource(empty, 2);
-	//m_targets.push_back(std::move(blendIn)); // target 3
-	*/
+	m_targets.push_back(std::move(blendIn)); // target 3
 
-	auto crosshatchIn = std::make_unique<RenderTarget>();
-	ID3D11ShaderResourceView* empty2[2] = { nullptr, nullptr };
-	crosshatchIn->SetResource(empty2, 2);
-	m_targets.push_back(std::move(crosshatchIn));
 
 
 	/* RENDER PASSES */
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
-	auto lightingPass = std::make_unique<LightingPass>();
-	lightingPass->Initialize(m_device, L"Shaders/base.ps");
-	lightingPass->Begin = [this, shadowSampler]()
-	{
-		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
-	};
-	m_passes.push_back(std::move(lightingPass)); // pass 0
+	auto crosshatchPass = std::make_unique<CrosshatchPass>();
+	crosshatchPass->Initialize(m_device, L"Shaders/crosshatch.ps");
+	m_passes.push_back(std::move(crosshatchPass)); // pass 0
 
-	/* DISABLE
 	auto sobelPass = std::make_unique<SobelPass>();
 	sobelPass->Initialize(m_device, L"Shaders/sobel.ps");
 	m_passes.push_back(std::move(sobelPass)); // pass 1
 
-
 	auto blendPass = std::make_unique<BlendPass>();
 	blendPass->Initialize(m_device, L"Shaders/blend.ps");
 	m_passes.push_back(std::move(blendPass)); // pass 2
-	*/
 
-	auto crosshatchPass = std::make_unique<CrosshatchPass>();
-	crosshatchPass->Initialize(m_device, L"Shaders/crosshatch.ps");
-	m_passes.push_back(std::move(crosshatchPass));
+
 
 	AssignTargets();
 
@@ -146,18 +127,19 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 
 bool RenderSystem::AssignTargets()
 {
-	m_passes[0]->AssignShaderResource(m_gBuffer, 4);
+	m_passes[0]->AssignShaderResource(&m_gBuffer[1], 1);
 	m_passes[0]->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
 
-	/* DISABLE
-	m_passes[1]->AssignShaderResource(m_targets[1]->GetResource(), m_targets[1]->GetNumViews());
-	m_passes[1]->AssignRenderTarget(m_targets[2]->GetTarget(), 1, nullptr);
+	m_passes[1]->AssignShaderResource(&m_gBuffer[2], 1);
+	m_passes[1]->AssignRenderTarget(m_targets[1]->GetTarget(), 1, nullptr);
 
-	m_passes[2]->AssignShaderResource(m_targets[3]->GetResource(), m_targets[3]->GetNumViews());
+	ID3D11ShaderResourceView* blendResources[2] = {
+		m_targets[0]->GetResource()[0],
+		m_targets[1]->GetResource()[0]
+	};
+	m_targets[2]->SetResource(blendResources, 2);
+	m_passes[2]->AssignShaderResource(m_targets[2]->GetResource(), m_targets[2]->GetNumViews());
 	m_passes[2]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
-	*/
-	m_passes[1]->AssignShaderResource(m_targets[1]->GetResource(), m_targets[1]->GetNumViews());
-	m_passes[1]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
 
 	return true;
 }
@@ -198,41 +180,23 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	m_gBuffer[1] = m_geometryPass->GetGBuffer(1);
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
 	m_gBuffer[3] = m_geometryPass->GetShadowMap();
+	
 
-	ID3D11ShaderResourceView* blendResources2[2] = {
-		m_targets[0]->GetResource()[0],
-		m_geometryPass->GetGBuffer(1)
-	};
-
-	m_targets[1]->SetResource(blendResources2, 2);
-
-	/* DISABLE
-	m_targets[1]->SetResource(m_gBuffer[1]); // Pick up depth buffer
-
-
-	ID3D11ShaderResourceView* blendResources[2] = {
-		m_targets[0]->GetResource()[0],
-		m_targets[2]->GetResource()[0]
-	};
-
-	m_targets[3]->SetResource(blendResources, 2);
-	*/
 
 	/* LIGHTING PASS */
 	/* CONSTANT BUFFER PARAMETERS*/
 	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
+	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirectionVec, viewMatrix);
+	XMFLOAT3 lightDirectionVS;
+	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
 	// TODO: IMPORTANT! REFACTOR
-	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
-		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
+	if (auto* cp = dynamic_cast<CrosshatchPass*>(m_passes[0].get()))
+		cp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, rParams.thicknessMul, rParams.densityMul, lightDirectionVS, rParams.inkColor, rParams.thresholdA, rParams.thresholdB, rParams.clearColor, rParams.hatchAngle, rParams.isFeather);
 
-	if (auto* sp = dynamic_cast<CrosshatchPass*>(m_passes[1].get()))
-		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, 1, 1);
-
-	/* DISABLE
 	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
-		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor);
-	*/
+		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor, rParams.clearColor);
+	
 
 
 	/* FORWARD RENDER */

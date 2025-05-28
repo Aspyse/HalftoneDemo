@@ -22,11 +22,12 @@ bool SobelPass::InitializeConstantBuffer(ID3D11Device* device)
 	return true;
 }
 
-bool SobelPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UINT width, UINT height, bool isScharr, float threshold, float* inkColor)
+bool SobelPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UINT width, UINT height, bool isScharr, float threshold, float* inkColor, float* clearColor)
 {
 	XMFLOAT2 offset = XMFLOAT2(1 / static_cast<float>(width), 1 / static_cast<float>(height));
 	threshold *= threshold; // artist control
 	XMFLOAT3 inkColorX = XMFLOAT3(inkColor[0], inkColor[1], inkColor[2]);
+	XMFLOAT3 clearColorX = XMFLOAT3(clearColor[0], clearColor[1], clearColor[2]);
 	
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT result = deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -39,6 +40,7 @@ bool SobelPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UINT wid
 	dataPtr->offset = offset;
 	dataPtr->threshold = threshold;
 	dataPtr->inkColor = inkColorX;
+	dataPtr->clearColor = clearColorX;
 
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
 

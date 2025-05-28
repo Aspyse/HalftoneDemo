@@ -1,5 +1,4 @@
-Texture2D colorTexture : register(t0);
-Texture2D normalTexture : register(t1);
+Texture2D normalTexture : register(t0);
 SamplerState samplerState : register(s0);
 
 cbuffer CrosshatchBuffer : register(b0)
@@ -7,8 +6,17 @@ cbuffer CrosshatchBuffer : register(b0)
 	float2 offset;
 	float thicknessMul;
 	float topoFreqMul;
-	float radFreqMul;
 
+	float3 lightDirectionVS;
+	float thresholdA;
+
+	float3 inkColor;
+	float thresholdB;
+
+	float3 clearColor;
+	float hatchAngle;
+
+	bool isFeather;
 	float3 pad0;
 };
 
@@ -19,82 +27,80 @@ struct PixelInputType
 };
 
 // Manually calibrated values
-static const float wH = 32;
-static const float baseFreqH = 8;
+static const float wH = 0.75;
+static const float baseFreqH = 12;
 
-static const float wA = 1;
-static const float baseFreqA = 4;
+static float hw = wH * 0.5 * thicknessMul;
+static float freq	= baseFreqH * topoFreqMul;
+
+float GetMask(float3 Di, float3 N, float localHW)
+{
+	float hi = acos( dot(N, Di) );        // “height” from that direction
+
+	float field = hi * freq;
+	float dH = abs(frac(field) - 0.5);
+
+	float grad = fwidth(field) + 1e-5;
+	float pixelDistH = dH / grad;
+
+	return 1 - smoothstep(localHW - 0.5, localHW + 0.5, pixelDistH);
+}
 
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
-    float vis = colorTexture.Sample(samplerState, input.uv).r;
+	float3 normal = normalize(normalTexture.SampleLevel(samplerState, input.uv, 0).rgb * 2 - 1);
+	float3 L = normalize(-lightDirectionVS);
 
-	float halfWidthH = wH * 0.5 * thicknessMul;
-	float halfWidthA = wA * 0.5 * thicknessMul;
+	float NdotL = dot(normal, L);
 
-	float freqH = baseFreqH * topoFreqMul;
-	float freqA = baseFreqA * radFreqMul;
+	float2 Lxy = L.xy;
+
+	float3 up = abs(L.y) < 0.99 ? float3(0,1,0) : float3(1,0,0);
+	float3 U  = normalize(cross(up, L));
+	float3 V  = cross(L, U);
+
+	// rotate
+	float cosA = cos(hatchAngle);
+	float sinA = sin(hatchAngle);
+
+	/*
+	float2 D1xy = float2(
+		Lxy.x * cosA - Lxy.y * sinA,
+		Lxy.x * sinA + Lxy.y * cosA
+	);
+	float2 D2xy = float2(
+		Lxy.x * cosA + Lxy.y * sinA,
+	   -Lxy.x * sinA + Lxy.y * cosA
+	);
+	*/
+
+	float3 D1 = normalize(U * cosA + V * sinA);
+	float3 D2 = normalize(U * -sinA + V * cosA);
+
 	
-	static float2 textureSize;
-	colorTexture.GetDimensions(textureSize.x, textureSize.y);
+	float vis = smoothstep(thresholdA, thresholdA-0.2, NdotL);
+	float vis2 = smoothstep(thresholdB, thresholdB-0.2, NdotL);
+	vis = lerp(1, vis, isFeather);
+	vis2 = lerp(1, vis2, isFeather);
 
-	float2 offset = float2(1.0, 1.0) / textureSize;
-
-	float3 normal = normalTexture.SampleLevel(samplerState, input.uv, 0).rgb * 2 - 1;
-
-	/* TOPO LINES */
-	// TODO: consider sobel
-	float h = acos(normal.b);
-
-	float3 nLeft  = normalTexture.Sample(samplerState, input.uv - float2(offset.x, 0)).rgb;
-	float3 nRight = normalTexture.Sample(samplerState, input.uv + float2(offset.x, 0)).rgb;
-	float3 nUp    = normalTexture.Sample(samplerState, input.uv + float2(0, offset.y)).rgb;
-	float3 nDown  = normalTexture.Sample(samplerState, input.uv - float2(0, offset.y)).rgb;
-
-	float dNdx = (acos(nRight.b) - acos(nLeft.b)) * 0.5;  
-	float dNdy = (acos(nUp.b)    - acos(nDown.b)) * 0.5;
-
-	float2 gradH = float2(dNdx, dNdy);
-	float distTopo = frac(h * freqH) - 0.5;
-
-	float spacingH = 1.0 / freqH;
-	float valH = frac(h * freqH);
-	float dH = abs(valH - 0.5);
-	float gradMagH = length(gradH);
-	//float gradMagH = 0.01;
-	float pixelDistH = dH / (gradMagH + 1e-5);
-
-	float lineOutH = 1.0 - smoothstep(halfWidthH - 0.5, halfWidthH + 0.5, pixelDistH);
-
-	/* RADIAL LINES */
-	float2 Nxy = normalize(normal.xy);
-	float angle = atan2(Nxy.g, Nxy.r);
-
-	float dNXdx = ddx(Nxy.x);
-	float dNXdy = ddy(Nxy.x);
-	float dNYdx = ddx(Nxy.y);
-	float dNYdy = ddy(Nxy.y);
-
-	float denom = Nxy.x*Nxy.x + Nxy.y*Nxy.y + 1e-6;
-
-	float dTdx = (Nxy.x*dNYdx - Nxy.y*dNXdx) / denom;
-	float dTdy = (Nxy.x*dNYdy - Nxy.y*dNXdy) / denom;
-	float gradT = sqrt(dTdx * dTdx + dTdy * dTdy) + 1e-5;
-
-	float fR = angle * freqA;
-	float d = abs(frac(fR) - 0.5);
-	float pixelDist = d / (gradT * freqA);
+	float hwA = hw * vis;
+	float hwB = hw * vis2;
 	
-	float lineOutA = 1.0 - smoothstep(halfWidthA - 0.5, halfWidthA + 0.5, pixelDist);
+
+	float mask1 = GetMask(D1, normal, hwA);
+	float mask2 = GetMask(D2, normal, hwB);
 
 	/* FINAL COLOR */
-	float vis2 = (vis > 0.73) ? 0 : 1;
-	vis = (vis > 0.99999) ? 0 : 1;
+	vis = (NdotL >= thresholdA) ? 0 : 1;
+	vis2 = (NdotL >= thresholdB) ? 0 : 1;
 
-	float color = 1;
-	color -= lineOutH * vis2;
-	color -= lineOutA * vis;
-	color = saturate(color);
+	float edge = 1;
+	edge -= mask1 * vis;
+	edge -= mask2 * vis2;
+	edge = saturate(edge);
+	edge = 1 - edge;
+
+	float3 color = (edge * inkColor) + ((1-edge) * clearColor);
 	
-    return float4(color, color, color, 1);
+    return float4(color, edge);
 }
