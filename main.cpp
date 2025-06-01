@@ -2,6 +2,7 @@
 // lets make something pretty
 
 #include "engine.h"
+#include <iostream>
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pScmdline, int iCmdshow)
 {

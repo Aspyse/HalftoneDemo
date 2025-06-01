@@ -16,17 +16,20 @@
     <Filter Include="Source Files\Shaders">
       <UniqueIdentifier>{02a7c647-566e-4b40-811f-31caa6b384d1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\External">
-      <UniqueIdentifier>{f7f4d981-4794-4514-a7fb-3515594dc1f4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\External\ImGui">
-      <UniqueIdentifier>{aa50ad68-e582-4aa6-a23c-f2e736fe6c48}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Subsystems">
       <UniqueIdentifier>{790cacc8-635c-452c-9d3f-7dd2c90469b1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Classes">
       <UniqueIdentifier>{8b286267-0239-4665-9e63-f5fb98fc5351}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders\Render Passes">
+      <UniqueIdentifier>{ef0a6a66-0258-4c5c-bf2c-d9deed592372}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External">
+      <UniqueIdentifier>{f7f4d981-4794-4514-a7fb-3515594dc1f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\imgui">
+      <UniqueIdentifier>{5ddf53ca-09a6-4fc3-87fa-4d6f1d0f0890}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,29 +39,8 @@
     <ClCompile Include="engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_demo.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_draw.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_tables.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_widgets.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="external\miniply.cpp">
-      <Filter>Source Files\External</Filter>
+    <ClCompile Include="include\miniply\miniply.cpp">
+      <Filter>External</Filter>
     </ClCompile>
     <ClCompile Include="Classes\camera.cpp">
       <Filter>Source Files\Classes</Filter>
@@ -75,52 +57,52 @@
     <ClCompile Include="Subsystems\render_system.cpp">
       <Filter>Source Files\Subsystems</Filter>
     </ClCompile>
-    <ClCompile Include="Shaders\RenderPasses\geometry_pass.cpp">
-      <Filter>Source Files\Shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="Shaders\RenderPasses\lighting_pass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Shaders\RenderPasses\normal_edge_pass.h">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="include\imgui\imgui.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_demo.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_draw.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\backends\imgui_impl_dx11.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_tables.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_widgets.cpp">
+      <Filter>External\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\geometry_pass.cpp">
+      <Filter>Source Files\Shaders\Render Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\crosshatch_pass.cpp">
+      <Filter>Source Files\Shaders\Render Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp">
+      <Filter>Source Files\Shaders\Render Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Shaders\RenderPasses\lighting_pass.cpp">
+      <Filter>Source Files\Shaders\Render Passes</Filter>
+    </ClCompile>
     <ClCompile Include="Shaders\RenderPasses\sobel_pass.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Shaders\Render Passes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imconfig.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\imgui.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\imgui_internal.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\imstb_rectpack.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\imstb_textedit.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\imstb_truetype.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\backends\imgui_impl_dx11.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui\backends\imgui_impl_win32.h">
-      <Filter>Source Files\External\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="external\miniply.h">
-      <Filter>Source Files\External</Filter>
+    <ClInclude Include="include\miniply\miniply.h">
+      <Filter>External</Filter>
     </ClInclude>
     <ClInclude Include="Classes\camera.h">
       <Filter>Source Files\Classes</Filter>
@@ -140,9 +122,6 @@
     <ClInclude Include="Classes\render_target.h">
       <Filter>Source Files\Classes</Filter>
     </ClInclude>
-    <ClInclude Include="Shaders\RenderPasses\geometry_pass.h">
-      <Filter>Source Files\Shaders</Filter>
-    </ClInclude>
     <ClInclude Include="Shaders\RenderPasses\render_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -160,6 +139,60 @@
     </ClInclude>
     <ClInclude Include="Shaders\RenderPasses\blend_pass.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\RenderPasses\crosshatch_pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\base64.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\core.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\dxmath_element_traits.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\glm_element_traits.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\math.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\tools.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\types.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\fastgltf\util.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\backends\imgui_impl_dx11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\backends\imgui_impl_win32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imgui_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imstb_rectpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imstb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui\imstb_truetype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\RenderPasses\geometry_pass.h">
+      <Filter>Source Files\Shaders\Render Passes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -181,9 +214,20 @@
     <None Include="Shaders\shadow.vs">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="Shaders\flat.ps" />
-    <None Include="Shaders\normal_edge.ps" />
-    <None Include="Shaders\sobel.ps" />
-    <None Include="Shaders\blend.ps" />
+    <None Include="Shaders\blend.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\crosshatch.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\flat.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\normal_edge.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\sobel.ps">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

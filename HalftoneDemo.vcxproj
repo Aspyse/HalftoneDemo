@@ -20,19 +20,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Classes\camera.cpp" />
+    <ClCompile Include="include\imgui\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="include\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="include\imgui\imgui.cpp" />
+    <ClCompile Include="include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Shaders\RenderPasses\crosshatch_pass.cpp" />
     <ClCompile Include="Shaders\RenderPasses\halftone_pass.cpp" />
     <ClCompile Include="Shaders\RenderPasses\lighting_pass.cpp" />
     <ClCompile Include="Classes\model.cpp" />
     <ClCompile Include="engine.cpp" />
-    <ClCompile Include="external\miniply.cpp" />
-    <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp" />
-    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp" />
-    <ClCompile Include="imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui_tables.cpp" />
-    <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="include\miniply\miniply.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Shaders\RenderPasses\geometry_pass.cpp" />
     <ClCompile Include="Shaders\RenderPasses\normal_edge_pass.h" />
@@ -43,6 +43,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Classes\camera.h" />
+    <ClInclude Include="include\fastgltf\base64.hpp" />
+    <ClInclude Include="include\fastgltf\core.hpp" />
+    <ClInclude Include="include\fastgltf\dxmath_element_traits.hpp" />
+    <ClInclude Include="include\fastgltf\glm_element_traits.hpp" />
+    <ClInclude Include="include\fastgltf\math.hpp" />
+    <ClInclude Include="include\fastgltf\tools.hpp" />
+    <ClInclude Include="include\fastgltf\types.hpp" />
+    <ClInclude Include="include\fastgltf\util.hpp" />
+    <ClInclude Include="include\imgui\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="include\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="include\imgui\imconfig.h" />
+    <ClInclude Include="include\imgui\imgui.h" />
+    <ClInclude Include="include\imgui\imgui_internal.h" />
+    <ClInclude Include="include\imgui\imstb_rectpack.h" />
+    <ClInclude Include="include\imgui\imstb_textedit.h" />
+    <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="Shaders\RenderPasses\blend_pass.h" />
     <ClInclude Include="Shaders\RenderPasses\crosshatch_pass.h" />
     <ClInclude Include="Shaders\RenderPasses\halftone_pass.h" />
@@ -51,15 +67,7 @@
     <ClInclude Include="Classes\render_target.h" />
     <ClInclude Include="Shaders\RenderPasses\render_pass.h" />
     <ClInclude Include="engine.h" />
-    <ClInclude Include="external\miniply.h" />
-    <ClInclude Include="imgui\backends\imgui_impl_dx11.h" />
-    <ClInclude Include="imgui\backends\imgui_impl_win32.h" />
-    <ClInclude Include="imgui\imconfig.h" />
-    <ClInclude Include="imgui\imgui.h" />
-    <ClInclude Include="imgui\imgui_internal.h" />
-    <ClInclude Include="imgui\imstb_rectpack.h" />
-    <ClInclude Include="imgui\imstb_textedit.h" />
-    <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="include\miniply\miniply.h" />
     <ClInclude Include="Shaders\RenderPasses\geometry_pass.h" />
     <ClInclude Include="Shaders\RenderPasses\sobel_pass.h" />
     <ClInclude Include="Subsystems\gui_system.h" />
@@ -166,7 +174,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>imgui/;imgui/backends;Subsystems/;Classes/;external/;Shaders/;Shaders/RenderPasses</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include/imgui/;include/imgui/backends;Subsystems/;Classes/;Shaders/;Shaders/RenderPasses;include/miniply;include/fastgltf</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
