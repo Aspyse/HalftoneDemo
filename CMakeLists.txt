@@ -25,6 +25,15 @@ add_executable (HalftoneDemo
 	"Subsystems/gui_system.cpp"
 	"Subsystems/input_system.cpp"
 	"Subsystems/render_system.cpp"
+
+	"include/imgui/imgui.cpp"
+	"include/imgui/imgui_demo.cpp"
+	"include/imgui/imgui_draw.cpp"
+	"include/imgui/imgui_tables.cpp"
+	"include/imgui/imgui_widgets.cpp"
+	"include/imgui/backends/imgui_impl_dx11.cpp"
+	"include/imgui/backends/imgui_impl_win32.cpp"
+	"include/miniply/miniply.cpp"
 )
 
 target_include_directories(HalftoneDemo
@@ -37,6 +46,42 @@ target_include_directories(HalftoneDemo
 		"${CMAKE_SOURCE_DIR}/Shaders"
 		"${CMAKE_SOURCE_DIR}/Shaders/RenderPasses"
 		"${CMAKE_SOURCE_DIR}/Subsystems"
+)
+
+target_link_libraries(HalftoneDemo
+    d3d11
+)
+
+file(GLOB_RECURSE ALL_RESOURCES
+    "${CMAKE_SOURCE_DIR}/Shaders/*.vs"
+	"${CMAKE_SOURCE_DIR}/Shaders/*.ps"
+	"${CMAKE_SOURCE_DIR}/Models/*.ply"
+	"${CMAKE_SOURCE_DIR}/Models/*.glb"
+)
+
+foreach(RESOURCE_FILE ${ALL_RESOURCES})
+    file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${RESOURCE_FILE}")
+
+    set(DEST_PATH "${CMAKE_BINARY_DIR}/${REL_PATH}")
+
+    get_filename_component(DEST_DIR "${DEST_PATH}" DIRECTORY)
+    file(MAKE_DIRECTORY "${DEST_DIR}")
+
+    configure_file(
+        "${RESOURCE_FILE}"
+        "${DEST_PATH}"
+        COPYONLY
+    )
+endforeach()
+
+target_compile_definitions(HalftoneDemo
+  PRIVATE
+    UNICODE
+    _UNICODE
+)
+
+set_target_properties(HalftoneDemo PROPERTIES
+    WIN32_EXECUTABLE TRUE
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

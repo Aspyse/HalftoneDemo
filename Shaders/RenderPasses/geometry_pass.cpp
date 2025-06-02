@@ -51,9 +51,9 @@ bool GeometryPass::Initialize(ID3D11Device* device, UINT width, UINT height)
 
 bool GeometryPass::CompileShader(ID3D11Device* device)
 {
-    ID3D10Blob* errorMessage;
-    ID3D10Blob* vertexShaderBuffer;
-    ID3D10Blob* pixelShaderBuffer;
+    ID3D10Blob* errorMessage = nullptr;
+    ID3D10Blob* vertexShaderBuffer = nullptr;
+    ID3D10Blob* pixelShaderBuffer = nullptr;
 
     wchar_t vsFilename[128], psFilename[128];
 
