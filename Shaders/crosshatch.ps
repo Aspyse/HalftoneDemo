@@ -78,8 +78,8 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 	float3 D2 = normalize(U * -sinA + V * cosA);
 
 	
-	float vis = smoothstep(thresholdA, thresholdA-0.2, NdotL);
-	float vis2 = smoothstep(thresholdB, thresholdB-0.2, NdotL);
+	float vis = smoothstep(thresholdA, thresholdA-0.1, NdotL);
+	float vis2 = smoothstep(thresholdB, thresholdB-0.1, NdotL);
 	vis = lerp(1, vis, isFeather);
 	vis2 = lerp(1, vis2, isFeather);
 
