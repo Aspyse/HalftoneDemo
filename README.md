@@ -21,4 +21,27 @@ https://github.com/user-attachments/assets/c21fdf3e-5420-4872-8e56-f5b3eb63050d
 
 ## Setup
 
-The project is currently being developed as a Visual Studio solution (`.vscxproj` + `.sln`).
+### 1. Clone the repository
+
+```sh
+git clone https://github.com/Aspyse/HalftoneDemo.git
+cd HalftoneDemo
+```
+
+### 2. Configure
+
+```sh
+cmake --preset x64-release
+```
+
+### 3. Build
+
+```sh
+cmake --build out\build\x64-release
+```
+
+### 4. Run executable
+
+```sh
+.\out\build\x64-release\HalftoneDemo.exe
+```
