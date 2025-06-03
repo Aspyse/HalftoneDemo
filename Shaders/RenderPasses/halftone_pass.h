@@ -14,12 +14,18 @@ class HalftonePass : public RenderPass
 private:
 	struct HalftoneBufferType
 	{
-		float dotSize;
-		float padding[3];
+		XMFLOAT2 subdivisions;
+		int isMonotone;
+
+		XMFLOAT3 dotColor;
+
+		XMFLOAT3 channelOffsets;
+
+		float padding[2];
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, float, UINT, UINT);
+	bool SetShaderParameters(ID3D11DeviceContext*, float*, UINT, UINT, bool, float*);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

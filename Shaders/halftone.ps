@@ -8,7 +8,7 @@ cbuffer HalftoneBuffer : register(b0)
 	float3 dotColor;
 	float3 channelAngles;
 
-	float3 pad;
+	float pad;
 };
 
 struct PixelInputType
@@ -32,9 +32,9 @@ float2 GetCenterUV(float2 uv, float rotation)
 	return mul(rotUV, invRot);
 }
 
-float4 GetBrightness(float2 pixelPos, float2 textureSize, float2 centerPos)
+float4 GetBrightness(float2 pixelPos, float2 subdivisions, float2 centerPos)
 {
-	float2 centerUV = centerPos/textureSize;
+	float2 centerUV = centerPos * subdivisions;
 
 	float2 delta = centerPos - pixelPos;
 	float pixelDist = length(delta);
@@ -52,21 +52,15 @@ float4 GetBrightness(float2 pixelPos, float2 textureSize, float2 centerPos)
 
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
-	float2 textureSize;
-	inputTexture.GetDimensions(textureSize.x, textureSize.y);
-	textureSize /= dotSize;
+	float2 pixelPos = input.uv / subdivisions;
+	float2 centerPos = GetCenterUV(pixelPos, channelAngles.x); // doubles as cyan UV
+	float2 centerPosM = GetCenterUV(pixelPos, channelAngles.y);
+	float2 centerPosY = GetCenterUV(pixelPos, channelAngles.z);
 
-	float2 pixelPos = input.uv * textureSize;
-	float2 centerPos = GetCenterUV(pixelPos, 1); // doubles as cyan UV
-	float2 centerPosM = GetCenterUV(pixelPos, 1.1);
-	float2 centerPosY = GetCenterUV(pixelPos, 1.05);
-
-	float4 CMY = GetBrightness(pixelPos, textureSize, centerPos);
+	float4 CMY = GetBrightness(pixelPos, subdivisions, centerPos);
 	float C = CMY.r;
-	float M = GetBrightness(pixelPos, textureSize, centerPosM).g;
-	float Y = GetBrightness(pixelPos, textureSize, centerPosY).b;
-	
-
+	float M = GetBrightness(pixelPos, subdivisions, centerPosM).g;
+	float Y = GetBrightness(pixelPos, subdivisions, centerPosY).b;
 
 	float3 color = float3(C, M, Y);
 
