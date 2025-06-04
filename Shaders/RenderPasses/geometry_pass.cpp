@@ -428,7 +428,7 @@ bool GeometryPass::InitializeShadow(ID3D11Device* device)
     sd.Height = m_shadowMapSize;
     sd.MipLevels = 1;
     sd.ArraySize = 1;
-    sd.Format = DXGI_FORMAT_R24G8_TYPELESS;
+    sd.Format = DXGI_FORMAT_R32_TYPELESS;
     sd.SampleDesc.Count = 1;
     sd.Usage = D3D11_USAGE_DEFAULT;
     sd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
@@ -438,17 +438,17 @@ bool GeometryPass::InitializeShadow(ID3D11Device* device)
     if (FAILED(result))
         return false;
 
-    // 2) Depth‐Stencil View (for rendering into the shadow map)
+    // for rendering into the shadow map
     D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
     ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     device->CreateDepthStencilView(shadowTex, &dsvDesc, &m_shadowDSV);
 
-    // 3) Shader‐Resource View (for sampling the shadow map in the lighting pass)
+    // for sampling the shadow map in the lighting pass
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory(&srvDesc, sizeof(srvDesc));
-    srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
     device->CreateShaderResourceView(shadowTex, &srvDesc, &m_shadowSRV);
@@ -492,11 +492,11 @@ bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCou
 {
     // Set up light source
     XMVECTOR target = XMVectorZero(); // TODO
-    XMVECTOR lightPos = target - lightDirection * 2.0f;
+    XMVECTOR lightPos = target - lightDirection * 12.0f;
     XMVECTOR up = XMVectorSet(0, 1, 0, 0);
     XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
-    XMMATRIX lightProj = XMMatrixOrthographicLH(0.8f, 0.8f, 0.01f, 5.0f); // Adjust
+    XMMATRIX lightProj = XMMatrixOrthographicLH(24.0f, 24.0f, 0.01f, 24.0f); // TODO: Adjust
 
     m_lightViewProj = XMMatrixMultiply(lightView, lightProj);
     

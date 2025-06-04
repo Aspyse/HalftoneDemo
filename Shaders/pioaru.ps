@@ -1,0 +1,74 @@
+Texture2D normalTexture : register(t0);
+SamplerState samplerState : register(s0);
+
+cbuffer PioaruBuffer : register(b0)
+{
+	float3 inkColor;
+	float pad0;
+
+	float3 lightDirVS;
+	float pad1;
+
+	float2 subdivisions;
+	float2 pad2;
+}
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};
+
+static const float LINESPACING = 10;
+static const float HALFWIDTH = 1;
+
+float3 boxBlur(float2 uv)
+{
+	const int KERNEL_SIZE = 20;
+	int mid = KERNEL_SIZE / 2;
+	float3 agg = float3(0, 0, 0);
+	int actualSamples = 0;
+	[unroll]
+	for (int i = 0; i < KERNEL_SIZE; ++i)
+	{
+		[unroll]
+		for (int k = 0; k < KERNEL_SIZE; ++k)
+		{
+			float2 offset = subdivisions * int2(i - mid, k - mid);
+			float2 sampleUV = uv + offset;
+			if (sampleUV.x >= 0 && sampleUV.x <= 1 && sampleUV.y >= 0 && sampleUV.y <= 1)
+			{
+				float3 sample = normalTexture.Sample(samplerState, sampleUV);
+				agg += sample;
+				actualSamples++;
+			}
+		}
+	}
+	agg /= actualSamples;
+	return agg;
+}
+
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+	float3 N = normalTexture.Sample(samplerState, input.uv).rgb * 2 - 1;
+	float3 L = normalize(-lightDirVS);
+	float NdotL = dot(normalize(N), L);
+
+	float3 test = boxBlur(input.uv);
+
+	float2 dir = normalize(test.xy);
+
+	float2 pos = input.uv/subdivisions;
+
+	float t = dot(pos, dir) / LINESPACING;
+
+	float ft = frac(t);
+	float w = HALFWIDTH / LINESPACING;
+	float mask = 1 - smoothstep(w - 0.02, w + 0.02, abs(ft - 0.5));
+
+	float edge = 1-mask;
+
+	float3 color = (NdotL < 0.2) ? edge : 1;
+
+	return float4(color, 1);
+}

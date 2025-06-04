@@ -1,7 +1,9 @@
 # CMakeList.txt : CMake project for CustomLayout, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.14)
+set(CMAKE_CXX_STANDARD 20)
+add_definitions(-DNOMINMAX)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -10,6 +12,18 @@ if (POLICY CMP0141)
 endif()
 
 project ("HalftoneDemo")
+
+
+# FetchContent for fastgltf
+include(FetchContent)
+
+FetchContent_Declare(
+  fastgltf
+  GIT_REPOSITORY https://github.com/spnda/fastgltf.git
+  GIT_TAG        main
+)
+
+FetchContent_MakeAvailable(fastgltf)
 
 # Add source to this project's executable.
 add_executable (HalftoneDemo
@@ -34,11 +48,11 @@ add_executable (HalftoneDemo
 	"include/imgui/backends/imgui_impl_dx11.cpp"
 	"include/imgui/backends/imgui_impl_win32.cpp"
 	"include/miniply/miniply.cpp"
-)
+	"Shaders/RenderPasses/pioaru_pass.cpp")
 
 target_include_directories(HalftoneDemo
 	PRIVATE
-		"${CMAKE_SOURCE_DIR}/include/fastgltf"
+		"${CMAKE_SOURCE_DIR}/include"
 		"${CMAKE_SOURCE_DIR}/include/imgui"
 		"${CMAKE_SOURCE_DIR}/include/imgui/backends"
 		"${CMAKE_SOURCE_DIR}/include/miniply"
@@ -49,7 +63,9 @@ target_include_directories(HalftoneDemo
 )
 
 target_link_libraries(HalftoneDemo
-    d3d11
+	PRIVATE
+		d3d11
+		fastgltf::fastgltf
 )
 
 file(GLOB_RECURSE ALL_RESOURCES
@@ -84,8 +100,5 @@ set_target_properties(HalftoneDemo PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET HalftoneDemo PROPERTY CXX_STANDARD 20)
-endif()
 
 # TODO: Add tests and install targets if needed.

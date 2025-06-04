@@ -3,10 +3,6 @@ SamplerState samplerState : register(s0);
 
 cbuffer CrosshatchBuffer : register(b0)
 {
-	float2 offset;
-	float thicknessMul;
-	float topoFreqMul;
-
 	float3 lightDirectionVS;
 	float thresholdA;
 
@@ -16,8 +12,11 @@ cbuffer CrosshatchBuffer : register(b0)
 	float3 clearColor;
 	float hatchAngle;
 
+	float thicknessMul;
+	float topoFreqMul;
 	bool isFeather;
-	float3 pad0;
+	
+	float pad0;
 };
 
 struct PixelInputType
@@ -35,7 +34,8 @@ static float freq	= baseFreqH * topoFreqMul;
 
 float GetMask(float3 Di, float3 N, float localHW)
 {
-	float hi = acos( dot(N, Di) );        // “height” from that direction
+	float hi = acos(dot(N, Di));
+	//hi = hi * 0.5 + 0.5;
 
 	float field = hi * freq;
 	float dH = abs(frac(field) - 0.5);
@@ -56,23 +56,12 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 	float2 Lxy = L.xy;
 
 	float3 up = abs(L.y) < 0.99 ? float3(0,1,0) : float3(1,0,0);
-	float3 U  = normalize(cross(up, L));
+	float3 U  = normalize(cross(L, up));
 	float3 V  = cross(L, U);
 
 	// rotate
 	float cosA = cos(hatchAngle);
 	float sinA = sin(hatchAngle);
-
-	/*
-	float2 D1xy = float2(
-		Lxy.x * cosA - Lxy.y * sinA,
-		Lxy.x * sinA + Lxy.y * cosA
-	);
-	float2 D2xy = float2(
-		Lxy.x * cosA + Lxy.y * sinA,
-	   -Lxy.x * sinA + Lxy.y * cosA
-	);
-	*/
 
 	float3 D1 = normalize(U * cosA + V * sinA);
 	float3 D2 = normalize(U * -sinA + V * cosA);
@@ -100,7 +89,7 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 	edge = saturate(edge);
 	edge = 1 - edge;
 
-	float3 color = (edge * inkColor) + ((1-edge) * clearColor);
+	float3 color = lerp(clearColor, inkColor, edge);
 	
     return float4(color, edge);
 }

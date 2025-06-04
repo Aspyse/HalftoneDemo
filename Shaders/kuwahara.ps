@@ -1,0 +1,13 @@
+Texture2D inputTexture : register(t0);
+SamplerState samplerState : register(s0);
+
+cbuffer KuwaharaBuffer : register(b0)
+{
+	int kernelSize;
+};
+
+struct PixelInputType
+{
+	float2 uv : TEXCOORD0;
+	float4 position : SV_POSITION;
+};

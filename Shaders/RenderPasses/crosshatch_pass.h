@@ -26,11 +26,11 @@ private:
 		float hatchAngle;
 
 		int isFeather;
-		float padding[3];
+		float padding;
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, UINT, UINT, float, float, XMFLOAT3, float*, float, float, float*, float, bool);
+	bool SetShaderParameters(ID3D11DeviceContext*, float, float, XMFLOAT3, float*, float, float, float*, float, bool);
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;

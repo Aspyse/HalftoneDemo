@@ -74,15 +74,17 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	/* AMBIENT */
     float3 ambient = albedo * ambientColor;
 
+	/* BACKGROUND CLEANING
 	float depth = depthTexture.Sample(pointClamp, input.uv).r;
 	const float clipDistance = 0.95f;
 	if (depth > clipDistance)
 		return float4(ambient,1);
+	*/
 
 	/* SHADOW MAPPING */
 	float4 worldPos = mul(float4(viewPos,1), invView);
 	float vis = 1;
-	//vis = ShadowVisibility(worldPos);
+	vis = ShadowVisibility(worldPos);
 
 	/* COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory */
 	float NdotL = saturate(dot(normal, L));
@@ -113,5 +115,6 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	/* OUTPUT */
     float3 color = (diffuse + specular) * lightColor * NdotL * vis;
 
+	//return float4(shadowMap.Sample(pointClamp, input.uv).rgb, 1);
 	return float4(color + ambient, 1);
 };

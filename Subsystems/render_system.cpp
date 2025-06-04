@@ -3,6 +3,7 @@
 #include "sobel_pass.h"
 #include "blend_pass.h"
 #include "crosshatch_pass.h"
+#include "pioaru_pass.h"
 
 #include "render_system.h"
 #include "imgui_impl_dx11.h"
@@ -87,37 +88,24 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 
 	/* RENDER TARGETS */
 	// Stored in vector for management (TODO)
+	/*
 	auto crosshatchOut = std::make_unique<RenderTarget>();
 	crosshatchOut->Initialize(m_device, m_screenWidth, m_screenHeight);
 	m_targets.push_back(std::move(crosshatchOut)); // target 0
-
-	auto sobelOut = std::make_unique<RenderTarget>();
-	sobelOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(sobelOut)); // target 0
-
-	auto blendIn = std::make_unique<RenderTarget>();
-	ID3D11ShaderResourceView* empty[2] = { nullptr, nullptr };
-	blendIn->SetResource(empty, 2);
-	m_targets.push_back(std::move(blendIn)); // target 3
-
+	*/
 
 
 	/* RENDER PASSES */
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
-	auto crosshatchPass = std::make_unique<CrosshatchPass>();
-	crosshatchPass->Initialize(m_device, L"Shaders/crosshatch.ps");
-	m_passes.push_back(std::move(crosshatchPass)); // pass 0
-
-	auto sobelPass = std::make_unique<SobelPass>();
-	sobelPass->Initialize(m_device, L"Shaders/sobel.ps");
-	m_passes.push_back(std::move(sobelPass)); // pass 1
-
-	auto blendPass = std::make_unique<BlendPass>();
-	blendPass->Initialize(m_device, L"Shaders/blend.ps");
-	m_passes.push_back(std::move(blendPass)); // pass 2
-
+	auto lightingPass = std::make_unique<LightingPass>();
+	lightingPass->Initialize(m_device, L"Shaders/base.ps");
+	lightingPass->Begin = [this, shadowSampler]()
+	{
+		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
+	};
+	m_passes.push_back(std::move(lightingPass)); // pass 0
 
 
 	AssignTargets();
@@ -127,19 +115,8 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 
 bool RenderSystem::AssignTargets()
 {
-	m_passes[0]->AssignShaderResource(&m_gBuffer[1], 1);
-	m_passes[0]->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
-
-	m_passes[1]->AssignShaderResource(&m_gBuffer[2], 1);
-	m_passes[1]->AssignRenderTarget(m_targets[1]->GetTarget(), 1, nullptr);
-
-	ID3D11ShaderResourceView* blendResources[2] = {
-		m_targets[0]->GetResource()[0],
-		m_targets[1]->GetResource()[0]
-	};
-	m_targets[2]->SetResource(blendResources, 2);
-	m_passes[2]->AssignShaderResource(m_targets[2]->GetResource(), m_targets[2]->GetNumViews());
-	m_passes[2]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
+	m_passes[0]->AssignShaderResource(m_gBuffer, 4);
+	m_passes[0]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
 
 	return true;
 }
@@ -190,12 +167,8 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	XMFLOAT3 lightDirectionVS;
 	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
-	// TODO: IMPORTANT! REFACTOR
-	if (auto* cp = dynamic_cast<CrosshatchPass*>(m_passes[0].get()))
-		cp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, rParams.thicknessMul, rParams.densityMul, lightDirectionVS, rParams.inkColor, rParams.thresholdA, rParams.thresholdB, rParams.clearColor, rParams.hatchAngle, rParams.isFeather);
-
-	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
-		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor, rParams.clearColor);
+	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
+		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVS, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
 	
 
 

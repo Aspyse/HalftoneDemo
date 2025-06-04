@@ -1,5 +1,7 @@
 #include "model.h"
 #include <miniply.h>
+#include <fastgltf/core.hpp>
+#include <fastgltf/tools.hpp>
 
 ModelClass::ModelClass() {}
 ModelClass::ModelClass(const ModelClass&) {}
@@ -12,10 +14,18 @@ bool ModelClass::Initialize(ID3D11Device* device, const char* filename)
 	VertexType* vertices = nullptr;
 	ULONG* indices = nullptr;
 	
-	LoadPLY(vertices, indices, filename);
+	const char* extension = strrchr(filename, '.');
+	if (strcmp(extension, ".ply") == 0)
+	{
+		LoadPLY(vertices, indices, filename);
+		CalculateNormals(vertices, indices);
+		CalculateUVs(vertices, indices);
+	}
+	else if (strcmp(extension, ".glb") == 0)
+		LoadGLB(vertices, indices, filename, 0.0005f);
+	else
+		return false;
 
-	CalculateNormals(vertices, indices);
-	CalculateUVs(vertices, indices);
 
 	// Create description of static vertex buffer
 	D3D11_BUFFER_DESC vbd;
@@ -101,6 +111,112 @@ void ModelClass::Render(ID3D11DeviceContext* deviceContext)
 
 	// Set type of primitive to be rendered
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const char* filename, float scaleFac)
+{
+	std::vector<VertexType> vertices;
+	std::vector<ULONG> indices;
+	
+	auto ext =
+		fastgltf::Extensions::KHR_mesh_quantization;
+	
+	fastgltf::Parser parser{ ext };
+	std::filesystem::path filePath(filename);
+
+	auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
+	if (data.error() != fastgltf::Error::None)
+		return false;
+
+	auto asset = parser.loadGltfBinary(data.get(), filePath.parent_path(), fastgltf::Options::None);
+	if (!asset)
+		return false;
+
+	for (const auto& mesh : asset->meshes) {
+		for (const auto& primitive : mesh.primitives) {
+			size_t baseVertex = vertices.size();
+
+			// === Indices ===
+			std::vector<uint32_t> localIndices;
+			if (primitive.indicesAccessor) {
+				auto& accessor = asset->accessors[*primitive.indicesAccessor];
+				localIndices.resize(accessor.count);
+				fastgltf::iterateAccessorWithIndex<uint32_t>(asset.get(), accessor,
+					[&](uint32_t val, size_t i) {
+						localIndices[i] = static_cast<ULONG>(val);
+					});
+			}
+
+			// === Attributes ===
+			std::vector<fastgltf::math::fvec3> positions;
+			std::vector<fastgltf::math::fvec3> normals;
+			std::vector<fastgltf::math::fvec2> uvs;
+
+			// POSITION
+			if (auto* it = primitive.findAttribute("POSITION"); it != primitive.attributes.end()) {
+				auto& accessor = asset->accessors[it->accessorIndex];
+				positions.resize(accessor.count);
+				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec3>(asset.get(), accessor,
+					[&](fastgltf::math::fvec3 val, size_t i) {
+						positions[i] = val;
+					});
+			}
+
+			// NORMAL
+			if (auto it = primitive.findAttribute("NORMAL"); it != primitive.attributes.end()) {
+				auto& accessor = asset->accessors[it->accessorIndex];
+				normals.resize(accessor.count);
+				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec3>(asset.get(), accessor,
+					[&](fastgltf::math::fvec3 val, size_t i) {
+						normals[i] = val;
+					});
+			}
+
+			// TEXCOORD_0
+			if (auto it = primitive.findAttribute("TEXCOORD_0"); it != primitive.attributes.end()) {
+				auto& accessor = asset->accessors[it->accessorIndex];
+				uvs.resize(accessor.count);
+				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec2>(asset.get(), accessor,
+					[&](fastgltf::math::fvec2 val, size_t i) {
+						uvs[i] = val;
+					});
+			}
+
+			// === Assemble vertices ===
+			size_t count = positions.size();  // assume all attributes match count
+			vertices.reserve(vertices.size() + count);
+			for (size_t i = 0; i < count; ++i) {
+				positions[i] *= scaleFac; // TODO: clean up temp workaround
+				VertexType v = {
+					i < positions.size() ? DirectX::XMFLOAT3(positions[i][0], positions[i][1], positions[i][2]) : DirectX::XMFLOAT3(0,0,0),
+					i < uvs.size() ? DirectX::XMFLOAT2(uvs[i][0], uvs[i][1]) : DirectX::XMFLOAT2(0,0),
+					i < normals.size() ? DirectX::XMFLOAT3(normals[i][0], normals[i][1], normals[i][2]) : DirectX::XMFLOAT3(0,0,0)
+				};
+				vertices.push_back(v);
+			}
+
+			for (uint32_t localIdx : localIndices) {
+				indices.push_back(static_cast<ULONG>(localIdx + baseVertex));
+			}
+		}
+	}
+
+	// TODO: send vertices and indices to outVertices and outIndices
+	m_vertexCount = vertices.size();
+	m_indexCount = indices.size();
+
+	outVertices = new VertexType[m_vertexCount];
+	outIndices = new ULONG[m_indexCount];
+
+	//std::memcpy(outVertices, vertices.data(), m_vertexCount * sizeof(VertexType));
+	std::copy(
+		vertices.begin(),
+		vertices.end(),
+		outVertices
+	);
+	std::memcpy(outIndices, indices.data(), m_indexCount * sizeof(ULONG));
+	
+	return true;
 }
 
 bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const char* filename)

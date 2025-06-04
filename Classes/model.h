@@ -30,6 +30,7 @@ public:
 	XMMATRIX GetWorldMatrix();
 
 private:
+	bool LoadGLB(VertexType*&, ULONG*&, const char*, float);
 	bool LoadPLY(VertexType*&, ULONG*&, const char*);
 	bool CalculateNormals(VertexType*, ULONG*);
 	bool CalculateUVs(VertexType*, ULONG*);

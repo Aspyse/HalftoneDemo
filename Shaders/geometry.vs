@@ -30,6 +30,7 @@ PixelInputType GeometryVertexShader(VertexInputType input)
     output.position = mul(output.position, projectionMatrix);
 
     output.normal = normalize(mul(input.normal, (float3x3)viewMatrix));
+    //output.normal = normalize(input.normal);
 
     output.uv = input.uv;
 

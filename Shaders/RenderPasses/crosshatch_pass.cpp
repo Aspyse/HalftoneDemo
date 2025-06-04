@@ -2,7 +2,7 @@
 
 bool CrosshatchPass::InitializeConstantBuffer(ID3D11Device* device)
 {
-	ComPtr<ID3D11Buffer> sobelBuffer;
+	ComPtr<ID3D11Buffer> crosshatchBuffer;
 
 	D3D11_BUFFER_DESC cbd;
 	ZeroMemory(&cbd, sizeof(cbd));
@@ -13,18 +13,17 @@ bool CrosshatchPass::InitializeConstantBuffer(ID3D11Device* device)
 	cbd.MiscFlags = 0;
 	cbd.StructureByteStride = 0;
 
-	HRESULT result = device->CreateBuffer(&cbd, nullptr, sobelBuffer.GetAddressOf());
+	HRESULT result = device->CreateBuffer(&cbd, nullptr, crosshatchBuffer.GetAddressOf());
 	if (FAILED(result))
 		return false;
 
-	m_constantBuffers.push_back(sobelBuffer);
+	m_constantBuffers.push_back(crosshatchBuffer);
 
 	return true;
 }
 
-bool CrosshatchPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UINT width, UINT height, float thicknessMul, float topoFreqMul, XMFLOAT3 lightDirectionVS, float* inkColor, float thresholdA, float thresholdB, float* clearColor, float hatchAngle, bool isFeather)
+bool CrosshatchPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float thicknessMul, float topoFreqMul, XMFLOAT3 lightDirectionVS, float* inkColor, float thresholdA, float thresholdB, float* clearColor, float hatchAngle, bool isFeather)
 {
-	XMFLOAT2 offset = XMFLOAT2(1 / static_cast<float>(width), 1 / static_cast<float>(height));
 	XMFLOAT3 inkColorX = XMFLOAT3(inkColor[0], inkColor[1], inkColor[2]);
 	XMFLOAT3 clearColorX = XMFLOAT3(clearColor[0], clearColor[1], clearColor[2]);
 
@@ -35,7 +34,6 @@ bool CrosshatchPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UIN
 
 	CrosshatchBufferType* dataPtr = (CrosshatchBufferType*)mappedResource.pData;
 
-	dataPtr->offset = offset;
 	dataPtr->thicknessMul = thicknessMul;
 	dataPtr->topoFreqMul = topoFreqMul;
 	dataPtr->thresholdA = thresholdA;
