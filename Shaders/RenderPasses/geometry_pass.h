@@ -69,7 +69,7 @@ private:
 	ID3D11DepthStencilView* m_shadowDSV = nullptr;
 	ID3D11ShaderResourceView* m_shadowSRV = nullptr;
 
-	UINT m_shadowMapSize = 2048;
+	UINT m_shadowMapSize = 4096;
 	D3D11_VIEWPORT m_shadowVp = {};
 	XMMATRIX m_lightViewProj = {};
 };

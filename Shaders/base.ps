@@ -83,8 +83,8 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 
 	/* SHADOW MAPPING */
 	float4 worldPos = mul(float4(viewPos,1), invView);
-	float vis = 1;
-	vis = ShadowVisibility(worldPos);
+	float vis = ShadowVisibility(worldPos);
+	//vis += 0.1 * length(ambientColor);
 
 	/* COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory */
 	float NdotL = saturate(dot(normal, L));
@@ -113,7 +113,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
     float3 diffuse = (1.0 - F) * albedo / PI;
 
 	/* OUTPUT */
-    float3 color = (diffuse + specular) * lightColor * NdotL * vis;
+    float3 color = (diffuse * saturate(vis + 0.1 * length(ambientColor)) + specular * vis) * lightColor * NdotL;
 
 	//return float4(shadowMap.Sample(pointClamp, input.uv).rgb, 1);
 	return float4(color + ambient, 1);

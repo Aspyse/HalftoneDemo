@@ -25,11 +25,11 @@ struct RenderParameters
     RenderParameters() :
         celThreshold(0.2f),
         roughness(0.16f),
-        albedoColor{ 1.0f, 0.25f, 0.0f },
+        albedoColor{ 0.6f, 0.5f, 0.5f },
         halftoneDotSize(6),
         edgeThreshold(0.25),
         inkColor{ 0.0f, 0.0f, 0.0f },
-        lightDirection{ 1.0f, -1.0f, 1.0f },
+        lightDirection{ 0.1f, -1.0f, 0.05f },
         clearColor{ 0.9f, 1.0f, 1.0f },
         ambientStrength(0.8f),
         thresholdA(0.35),

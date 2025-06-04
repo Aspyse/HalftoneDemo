@@ -169,7 +169,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 
 	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
 		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVS, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
-	
+
 
 
 	/* FORWARD RENDER */
