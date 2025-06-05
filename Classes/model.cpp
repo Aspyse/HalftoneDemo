@@ -182,7 +182,7 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 					});
 			}
 
-			// === Assemble vertices ===
+			// Assemble vertices 
 			size_t count = positions.size();  // assume all attributes match count
 			vertices.reserve(vertices.size() + count);
 			for (size_t i = 0; i < count; ++i) {

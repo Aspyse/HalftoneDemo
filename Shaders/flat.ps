@@ -86,10 +86,12 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	// AMBIENT
     float3 ambient = albedo * ambientColor;
 
+	/* BACKGROUND CLEANING
 	float depth = depthTexture.Sample(pointClamp, input.uv).r;
 	const float clipDistance = 0.95f;
 	if (depth > clipDistance)
 		return float4(ambient,1);
+	*/
 
 	// SHADOW MAPPING
 	float4 worldPos = mul(float4(viewPos,1), invView);
@@ -127,7 +129,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	// cel step
 	specular = (specular > 0.5) ? 1.0 : 0.0;
 
-    float3 color = (diffuse + specular) * lightColor * vis * NdotL;
+    float3 color = (diffuse * saturate(vis + 0.1 * length(ambientColor)) + specular * vis) * lightColor * NdotL;
 
 	return float4(color + ambient, 1);
 };
