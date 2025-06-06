@@ -15,7 +15,7 @@ public:
 
 	bool Initialize(float, float, float, float);
 
-	bool Resize(UINT, UINT);
+	void Resize(UINT, UINT);
 
 	void SetPosition(float, float, float);
 	void SetRotation(float, float, float);
@@ -28,7 +28,7 @@ public:
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetRotation();
 
-	void Frame(POINT, bool, bool, int);
+	void Frame(POINT, bool, bool, int, float, float, float);
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
 
@@ -48,6 +48,5 @@ private:
 	float m_yaw = 0.0f, m_pitch = 0.0f;
 	float m_distance = 1.0f;
 
-	float m_fov;
-	float m_screenNear = 0, m_screenDepth = 0;
+	float m_aspect;
 };

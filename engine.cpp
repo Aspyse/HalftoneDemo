@@ -25,12 +25,13 @@ bool Engine::Initialize()
 	m_guiSystem = new GuiSystem;
 	m_guiSystem->Initialize(m_hwnd);
 
+	// TODO: sync init values with gui
 	m_camera = new CameraClass;
 	float aspect = static_cast<float>(width) / static_cast<float>(height);
-	m_camera->Initialize(80, aspect, 0.1f, 1000.0f);
-	m_camera->SetPosition(0.0f, 0.1f, -1.0f);
+	m_camera->Initialize(80, aspect, 1.0f, 1000.0f);
+	m_camera->SetOrbitPosition(0.0f, 1.0f, 0.0f);
+	m_camera->SetPosition(0.0f, 1.0f, -1.0f);
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
-	m_camera->SetOrbitPosition(0.0f, 0.1f, 0.0f);
 
 	m_renderSystem = new RenderSystem;
 	m_renderSystem->Initialize(m_hwnd, m_wc);
@@ -107,6 +108,13 @@ bool Engine::Frame()
 	if (!result)
 		return false;
 
+	// Handle resize
+	if (m_inputSystem->IsResizeDirty())
+	{
+		m_renderSystem->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
+		m_camera->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
+	}
+
 	// Update camera
 	POINT newPos = m_inputSystem->GetMousePos();
 	POINT delta = {
@@ -114,14 +122,9 @@ bool Engine::Frame()
 		newPos.y - m_lastMousePos.y
 	};
 	m_lastMousePos = newPos;
-	m_camera->Frame(delta, m_inputSystem->IsMiddleMouseDown(), m_inputSystem->IsKeyDown(VK_SHIFT), m_inputSystem->GetScrollDelta());
+	m_camera->Frame(delta, m_inputSystem->IsMiddleMouseDown(), m_inputSystem->IsKeyDown(VK_SHIFT), m_inputSystem->GetScrollDelta(), m_renderParameters.verticalFOV, m_renderParameters.nearZ, m_renderParameters.farZ);
 
 	// Render
-	if (m_inputSystem->IsResizeDirty())
-	{
-		m_renderSystem->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
-		m_camera->Resize(m_inputSystem->GetResizeWidth(), m_inputSystem->GetResizeHeight());
-	}
 	result = m_renderSystem->Render(m_renderParameters, m_camera->GetViewMatrix(), m_camera->GetProjectionMatrix(), m_models);
 	if (!result)
 		return false;

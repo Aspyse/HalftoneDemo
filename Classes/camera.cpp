@@ -10,21 +10,17 @@ CameraClass::~CameraClass() {}
 
 bool CameraClass::Initialize(float fov, float aspect, float screenNear, float screenDepth)
 {
-	m_fov = XMConvertToRadians(fov);
-	m_screenNear = screenNear;
-	m_screenDepth = screenDepth;
+	m_aspect = aspect;
 
-	m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, aspect, screenNear, screenDepth);
+	fov = XMConvertToRadians(fov);
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(fov, aspect, screenNear, screenDepth);
 
 	return true;
 }
 
-bool CameraClass::Resize(UINT width, UINT height)
+void CameraClass::Resize(UINT width, UINT height)
 {
-	float aspect = static_cast<float>(width) / static_cast<float>(height);
-	m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, aspect, m_screenNear, m_screenDepth);
-
-	return true;
+	m_aspect = static_cast<float>(width) / static_cast<float>(height);
 }
 
 void CameraClass::SetPosition(float x, float y, float z)
@@ -156,7 +152,7 @@ XMFLOAT3 CameraClass::GetRotation()
 	return XMFLOAT3(m_rotation.x, m_rotation.y, m_rotation.z);
 }
 
-void CameraClass::Frame(POINT delta, bool isMiddleMouseDown, bool isShiftDown, int scrollDelta)
+void CameraClass::Frame(POINT delta, bool isMiddleMouseDown, bool isShiftDown, int scrollDelta, float fov, float screenNear, float screenDepth)
 {
 	if (isMiddleMouseDown)
 	{
@@ -192,6 +188,11 @@ void CameraClass::Frame(POINT delta, bool isMiddleMouseDown, bool isShiftDown, i
 
 	// Create view matrix
 	m_viewMatrix = XMMatrixLookAtLH(positionVector, lookAtVector, upVector);
+
+
+	// Projection matrix
+	fov = XMConvertToRadians(fov);
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(fov, m_aspect, screenNear, screenDepth);
 }
 
 XMMATRIX CameraClass::GetViewMatrix() const
