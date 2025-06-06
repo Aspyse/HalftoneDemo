@@ -340,7 +340,7 @@ void GeometryPass::Shutdown()
 
 bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness)
 {
-    roughness *= roughness;
+    //roughness *= roughness;
     
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
