@@ -132,7 +132,19 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 	if (!asset)
 		return false;
 
-	for (const auto& mesh : asset->meshes) {
+	size_t defaultScene = 0;
+	if (asset->defaultScene.has_value())
+		defaultScene = asset->defaultScene.value();
+	
+	const auto& scene = asset->scenes[defaultScene];
+
+	for (auto nodeIndex : scene.nodeIndices) {
+		const auto& node = asset->nodes[nodeIndex];
+		if (!node.meshIndex.has_value())
+			continue; // TODO: check if this is correct handling
+		const auto& mesh = asset->meshes[node.meshIndex.value()];
+		const auto& trs = std::get<fastgltf::TRS>(node.transform); // TODO: check, may not work for all models?
+
 		for (const auto& primitive : mesh.primitives) {
 			size_t baseVertex = vertices.size();
 
@@ -186,7 +198,13 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 			size_t count = positions.size();  // assume all attributes match count
 			vertices.reserve(vertices.size() + count);
 			for (size_t i = 0; i < count; ++i) {
-				positions[i] *= scaleFac; // TODO: clean up temp workaround
+				//positions[i] *= scaleFac; // TODO: clean up temp workaround
+
+				/* HANDLE TRANSFORMATION */
+				//TODO: handle rotation
+				positions[i] *= trs.scale;
+				positions[i] += trs.translation;
+
 				VertexType v = {
 					i < positions.size() ? DirectX::XMFLOAT3(positions[i][0], positions[i][1], positions[i][2]) : DirectX::XMFLOAT3(0,0,0),
 					i < uvs.size() ? DirectX::XMFLOAT2(uvs[i][0], uvs[i][1]) : DirectX::XMFLOAT2(0,0),
