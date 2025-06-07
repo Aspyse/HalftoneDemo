@@ -1,13 +1,19 @@
 Texture2D albedoTexture : register(t0);
-SamplerState albedoSampler : register(s0);
+Texture2D normalTexture : register(t1);
+Texture2D roughnessTexture : register(t2);
+SamplerState samplerState : register(s0);
 
 cbuffer MaterialBuffer : register(b0)
 {
     float3 albedoColor;
     float roughness;
-    bool useAlbedoTexture;
     
-    float3 padding;
+    bool useAlbedoTexture;
+    bool useNormalTexture;
+    bool useRoughnessTexture;
+    float padding;
+    
+    float4x4 viewMatrix;
 };
 
 struct PixelInputType
@@ -15,6 +21,8 @@ struct PixelInputType
 	float4 position : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 binormal : BINORMAL;
 };
 
 struct PixelOutputType
@@ -27,13 +35,23 @@ PixelOutputType GeometryPixelShader(PixelInputType input) : SV_TARGET
 {
     PixelOutputType output;
     
-    float3 texAlbedo = albedoTexture.Sample(albedoSampler, input.uv).rgb;
-    float3 albedo = lerp(albedoColor, texAlbedo, useAlbedoTexture ? 1.0 : 0.0);
-	output.albedo = float4(albedo, 1.0);
+    float4 texAlbedo = albedoTexture.Sample(samplerState, input.uv);
+    float4 albedo = useAlbedoTexture ? texAlbedo : float4(albedoColor, 1);
+	output.albedo = albedo;
 
-    float3 normal = normalize(input.normal);
+    float rough = useRoughnessTexture ? roughnessTexture.Sample(samplerState, input.uv).r : roughness;
+    
+    float4 bumpMap = normalTexture.Sample(samplerState, input.uv);
+    bumpMap = bumpMap * 2 - 1;
+    
+    float3 normal = bumpMap.x * input.tangent + bumpMap.y * input.binormal + bumpMap.z * input.normal;
+    
+    normal = useNormalTexture ? normal : input.normal;
+    
+    normal = mul(normal, (float3x3) viewMatrix);
+    normal = normalize(normal);
     normal = normal * 0.5f + 0.5f;
-    output.normal = float4(normal, roughness);
+    output.normal = float4(normal, rough);
 
     return output;
 }

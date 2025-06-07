@@ -3,7 +3,6 @@
 #include "sobel_pass.h"
 #include "blend_pass.h"
 #include "crosshatch_pass.h"
-#include "pioaru_pass.h"
 
 #include "render_system.h"
 #include "imgui_impl_dx11.h"
@@ -107,7 +106,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
 	auto lightingPass = std::make_unique<LightingPass>();
-	lightingPass->Initialize(m_device, L"Shaders/flat.ps");
+	lightingPass->Initialize(m_device, L"Shaders/base.ps");
 	lightingPass->Begin = [this, shadowSampler]()
 	{
 		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
@@ -162,18 +161,25 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirectionF));
 	XMFLOAT3 albedoColor = XMFLOAT3(rParams.albedoColor[0], rParams.albedoColor[1], rParams.albedoColor[2]);
 
+	m_geometryPass->ClearGBuffer(m_deviceContext, rParams.clearColor);
 	for (const auto& model : models)
 	{
-		model->Render(m_deviceContext);
-		XMMATRIX worldMatrix = model->GetWorldMatrix();
+		model->SetVertices(m_deviceContext);
+		for (UINT i = 0; i < model->GetMaterialCount(); ++i)
+		{
+			if (!model->IsOpaque(i)) continue;
+			
+			model->Render(m_device, m_deviceContext, i);
+			XMMATRIX worldMatrix = model->GetWorldMatrix();
 
-		m_geometryPass->RenderShadow(m_deviceContext, model->GetIndexCount(), lightDirectionVec);
+			m_geometryPass->RenderShadow(m_deviceContext, model->GetIndexCount(i), lightDirectionVec);
 
-		// Reset after viewport is set to shadowmap size
-		ResetViewport(m_screenWidth, m_screenHeight);
+			// Reset after viewport is set to shadowmap size
+			ResetViewport(m_screenWidth, m_screenHeight);
 
-		m_geometryPass->SetShaderParameters(m_deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoColor, rParams.roughness);
-		m_geometryPass->Render(m_deviceContext, model->GetIndexCount(), rParams.clearColor);
+			m_geometryPass->SetShaderParameters(m_deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoColor, rParams.roughness);
+			m_geometryPass->Render(m_deviceContext, model->GetIndexCount(i));
+		}
 	}
 	ReleaseRenderTargets();
 
@@ -265,6 +271,11 @@ void RenderSystem::Shutdown()
 ID3D11Device* RenderSystem::GetDevice() // For model
 {
 	return m_device;
+}
+
+ID3D11DeviceContext* RenderSystem::GetContext() // For model
+{
+	return m_deviceContext;
 }
 
 

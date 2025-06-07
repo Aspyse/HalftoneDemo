@@ -52,7 +52,7 @@ private:
 
 private:
 	ID3D11RenderTargetView* m_renderTarget = nullptr;
-	ID3D11ShaderResourceView* const* m_shaderResource;
+	ID3D11ShaderResourceView* const* m_shaderResource = nullptr;
 	ID3D11DepthStencilView* m_dsv = nullptr;
 
 	UINT m_numTargetViews = 0, m_numResourceViews = 0;

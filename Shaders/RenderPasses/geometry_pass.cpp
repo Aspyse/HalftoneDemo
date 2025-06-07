@@ -89,7 +89,7 @@ bool GeometryPass::CompileShader(ID3D11Device* device)
     if (FAILED(result))
         return false;
 
-    D3D11_INPUT_ELEMENT_DESC pl[3];
+    D3D11_INPUT_ELEMENT_DESC pl[5];
     pl[0].SemanticName = "POSITION";
     pl[0].SemanticIndex = 0;
     pl[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
@@ -113,6 +113,23 @@ bool GeometryPass::CompileShader(ID3D11Device* device)
     pl[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
     pl[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     pl[2].InstanceDataStepRate = 0;
+
+    pl[3].SemanticName = "TANGENT";
+    pl[3].SemanticIndex = 0;
+    pl[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    pl[3].InputSlot = 0;
+    pl[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    pl[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    pl[3].InstanceDataStepRate = 0;
+
+    pl[4].SemanticName = "BINORMAL";
+    pl[4].SemanticIndex = 0;
+    pl[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    pl[4].InputSlot = 0;
+    pl[4].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    pl[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    pl[4].InstanceDataStepRate = 0;
+
 
     UINT numElements = sizeof(pl) / sizeof(pl[0]);
 
@@ -349,8 +366,9 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 
     MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
     dataPtr2->roughness = roughness;
-    dataPtr2->useAlbedoTexture = false;
+    dataPtr2->useAlbedoTexture = true;
     dataPtr2->albedoColor = albedoColor;
+    dataPtr2->viewMatrix = XMMatrixTranspose(viewMatrix);
 
     deviceContext->Unmap(m_materialBuffer, 0);
 
@@ -376,21 +394,27 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
     return true;
 }
 
-
-void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount, float* clearColor)
+void GeometryPass::ClearGBuffer(ID3D11DeviceContext* deviceContext, float* clearColor)
 {
+    // Clear shadow
+    deviceContext->ClearDepthStencilView(m_shadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    
     // Clear the render target views
     //float clearColor[4] = { 0, 0, 0, 0 };
     deviceContext->ClearRenderTargetView(m_albedoRTV, clearColor);
     deviceContext->ClearRenderTargetView(m_normalRTV, clearColor);
 
+
+    deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount)
+{
     // Set the render targets (albedo and normal) along with the depth stencil view
     ID3D11RenderTargetView* renderTargets[2] = { m_albedoRTV, m_normalRTV };
 
     deviceContext->OMSetRenderTargets(2, renderTargets, m_dsv);
 
-    deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
-    
     deviceContext->IASetInputLayout(m_layout);
 
 	deviceContext->VSSetShader(m_vertexShader, nullptr, 0);
@@ -522,9 +546,6 @@ bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCou
     // Set viewport to shadow map size
 
     deviceContext->RSSetViewports(1, &m_shadowVp);
-
-    // Clear depth
-    deviceContext->ClearDepthStencilView(m_shadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     deviceContext->IASetInputLayout(m_shadowLayout);
 

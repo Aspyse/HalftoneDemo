@@ -39,15 +39,12 @@ float3 ReconstructViewPos(float2 uv)
 	float4 viewPosH = mul(clipPos, invProj);
 	return viewPosH.xyz / viewPosH.w;
 }
-float ShadowVisibility(float3 worldPos)
+float ShadowVisibility(float4 worldPos, float bias)
 {
 	float4 lightPos = mul(float4(worldPos, 1), lightViewProj);
 
 	float3 uv = lightPos.xyz / lightPos.w;
-
 	float2 shadowMapUV = float2(0.5f + uv.x * 0.5f, 0.5f - uv.y * 0.5f);
-
-	const float bias = 0.0022f;
 
 	return shadowMap.SampleCmpLevelZero(shadowSampler, shadowMapUV, uv.z - bias);
 }
@@ -55,11 +52,11 @@ float ShadowVisibility(float3 worldPos)
 float4 PostprocessShader(PixelInputType input) : SV_TARGET
 {
 	const float PI = 3.14159;
-	float3 albedo = albedoTexture.Sample(pointClamp, input.uv).rgb;
+    float4 albedo = albedoTexture.Sample(pointClamp, input.uv);
 	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
 	float3 normal = normalize(nr.rgb * 2 - 1);
 	float alpha = max(nr.a, 0.01);
-	//float alpha = rough * rough; // artist control
+    alpha *= alpha; // artist control
 
 	float3 viewPos = ReconstructViewPos(input.uv);
 	float3 V = normalize(-viewPos);
@@ -72,19 +69,15 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
 
 	/* AMBIENT */
-    float3 ambient = albedo * ambientColor;
-
-	/* BACKGROUND CLEANING
-	float depth = depthTexture.Sample(pointClamp, input.uv).r;
-	const float clipDistance = 0.95f;
-	if (depth > clipDistance)
-		return float4(ambient,1);
-	*/
-
+    float4 ambient = albedo * float4(ambientColor, 1);
+    float depth = depthTexture.Sample(pointClamp, input.uv).r;
+    if (depth == 1)
+        return ambient;
+	
 	/* SHADOW MAPPING */
 	float4 worldPos = mul(float4(viewPos,1), invView);
-	float vis = ShadowVisibility(worldPos);
-	//vis += 0.1 * length(ambientColor);
+    float vis = 1;
+    vis = ShadowVisibility(worldPos, 0.01f).r;
 
 	/* COOK-TORRANCE BSDF: https://learnopengl.com/PBR/Theory */
 	float NdotL = saturate(dot(normal, L));
@@ -93,8 +86,8 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	float VdotH = saturate(dot(V, H));
 
 	// schlick fresnel
-    float3 F0 = float3(0.04, 0.04, 0.04);
-    float3 F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
+    float F0 = 0.04;
+    float F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
 
 	// ndf
     float alpha2 = alpha * alpha;
@@ -107,7 +100,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
     float G_L = NdotL / (NdotL * (1.0 - k) + k);
     float G = G_V * G_L;
 
-    float3 specular = (D * G * F) / (4.0 * NdotV * NdotL + 0.001);
+    float specular = (D * G * F) / (4.0 * NdotV * NdotL + 0.001);
 
     // lambertian diffuse
     float3 diffuse = (1.0 - F) * albedo / PI;
@@ -116,5 +109,5 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
     float3 color = (diffuse * saturate(vis + 0.1 * length(ambientColor)) + specular * vis) * lightColor * NdotL;
 
 	//return float4(shadowMap.Sample(pointClamp, input.uv).rgb, 1);
-	return float4(color + ambient, 1);
+    return float4(color, 1) + ambient;
 };

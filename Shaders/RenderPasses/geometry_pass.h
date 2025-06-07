@@ -23,9 +23,14 @@ private:
 	{
 		XMFLOAT3 albedoColor;
 		float roughness;
+
 		int useAlbedoTexture;
+		int useNormalTexture;
+		int useRoughnessTexture;
 		
-		float padding[3];
+		float padding;
+
+		XMMATRIX viewMatrix;
 	};
 
 public:
@@ -38,7 +43,9 @@ public:
 	void Shutdown();
 
 	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, float); // TODO: take in texture
-	void Render(ID3D11DeviceContext*, int, float*);
+
+	void ClearGBuffer(ID3D11DeviceContext*, float*);
+	void Render(ID3D11DeviceContext*, int);
 	bool RenderShadow(ID3D11DeviceContext*, int, XMVECTOR);
 
 	ID3D11ShaderResourceView* GetGBuffer(UINT);

@@ -32,6 +32,7 @@ public:
 	void Resize(UINT, UINT);
 
 	ID3D11Device* GetDevice();
+	ID3D11DeviceContext* GetContext();
 
 private:
 	bool AssignTargets();
@@ -54,7 +55,7 @@ private:
 	void ResetViewport(float, float);
 
 private:
-	ID3D11ShaderResourceView* m_gBuffer[4];
+	ID3D11ShaderResourceView* m_gBuffer[4] = { nullptr, nullptr, nullptr, nullptr };
 	GeometryPass* m_geometryPass = nullptr;
 
 	vector<std::unique_ptr<ModelClass>> m_models;

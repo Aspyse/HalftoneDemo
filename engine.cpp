@@ -38,7 +38,7 @@ bool Engine::Initialize()
 
 	// FOR TESTING: create model
 	auto model = std::make_unique<ModelClass>();
-	model->Initialize(m_renderSystem->GetDevice(), "Models/NewSponza_Main_opt.glb");
+	model->Initialize(m_renderSystem->GetDevice(), m_renderSystem->GetContext(), "Models/NewSponza_Main_opt.glb");
 	//model->Initialize(m_renderSystem->GetDevice(), "Models/bun_zipper.ply");
 	m_models.push_back(std::move(model));
 

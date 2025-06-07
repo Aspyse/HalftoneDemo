@@ -1,7 +1,11 @@
 #pragma once
 
+#include "material.h"
+#include <fastgltf/core.hpp>
 #include <d3d11.h>
 #include <directxmath.h>
+#include <vector>
+#include <memory>
 
 using DirectX::XMFLOAT2;
 using DirectX::XMFLOAT3;
@@ -15,6 +19,8 @@ private:
 		XMFLOAT3 position;
 		XMFLOAT2 uv;
 		XMFLOAT3 normal;
+		XMFLOAT3 tangent;
+		XMFLOAT3 binormal;
 	};
 
 public:
@@ -22,20 +28,30 @@ public:
 	ModelClass(const ModelClass&);
 	~ModelClass();
 
-	bool Initialize(ID3D11Device*, const char*);
+	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, const char*);
 	void Shutdown();
-	void Render(ID3D11DeviceContext*);
+	void SetVertices(ID3D11DeviceContext*);
+	void Render(ID3D11Device*, ID3D11DeviceContext*, UINT);
 
-	int GetIndexCount();
+	int GetIndexCount(UINT);
+	bool IsOpaque(UINT);
 	XMMATRIX GetWorldMatrix();
 
-private:
-	bool LoadGLB(VertexType*&, ULONG*&, const char*, float);
-	bool LoadPLY(VertexType*&, ULONG*&, const char*);
-	bool CalculateNormals(VertexType*, ULONG*);
-	bool CalculateUVs(VertexType*, ULONG*);
+	UINT GetMaterialCount() const;
 
 private:
-	ID3D11Buffer *m_vertexBuffer = nullptr, *m_indexBuffer = nullptr;
-	UINT m_vertexCount = 0, m_indexCount = 0;
+	bool LoadGLB(ID3D11Device*, ID3D11DeviceContext*, VertexType*&, const char*);
+	bool LoadPLY(VertexType*&, const char*);
+	bool CalculateNormals(VertexType*);
+	bool DummyUVs(VertexType*);
+	bool CalculateModelVectors(VertexType*);
+
+	ID3D11ShaderResourceView* LoadTextureFromIndex(ID3D11Device*, ID3D11DeviceContext*, fastgltf::Asset*, UINT);
+
+private:
+	ID3D11Buffer* m_vertexBuffer = nullptr;
+	UINT m_vertexCount = 0;
+	std::vector<std::unique_ptr<MaterialClass>> m_materials;
+
+	std::vector<ID3D11Buffer*> m_indexBuffers;
 };

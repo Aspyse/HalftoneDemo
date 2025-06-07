@@ -1,7 +1,7 @@
 #include "model.h"
 #include <miniply.h>
-#include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
+#include <WICTextureLoader.h>
 
 ModelClass::ModelClass() {}
 ModelClass::ModelClass(const ModelClass&) {}
@@ -9,23 +9,24 @@ ModelClass::~ModelClass() {}
 
 using namespace DirectX;
 
-bool ModelClass::Initialize(ID3D11Device* device, const char* filename)
+bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const char* filename)
 {
 	VertexType* vertices = nullptr;
-	ULONG* indices = nullptr;
 	
 	const char* extension = strrchr(filename, '.');
 	if (strcmp(extension, ".ply") == 0)
 	{
-		LoadPLY(vertices, indices, filename);
-		CalculateNormals(vertices, indices);
-		CalculateUVs(vertices, indices);
+		m_materials.push_back(std::make_unique<MaterialClass>());
+		LoadPLY(vertices, filename);
+		CalculateNormals(vertices);
+		DummyUVs(vertices);
 	}
 	else if (strcmp(extension, ".glb") == 0)
-		LoadGLB(vertices, indices, filename, 0.0005f);
+		LoadGLB(device, deviceContext, vertices, filename);
 	else
 		return false;
 
+	CalculateModelVectors(vertices);
 
 	// Create description of static vertex buffer
 	D3D11_BUFFER_DESC vbd;
@@ -47,37 +48,42 @@ bool ModelClass::Initialize(ID3D11Device* device, const char* filename)
 	if (FAILED(result))
 		return false;
 
-	// Create description of static index buffer
-	D3D11_BUFFER_DESC ibd;
-	ZeroMemory(&ibd, sizeof(ibd));
-	ibd.Usage = D3D11_USAGE_DEFAULT;
-	ibd.ByteWidth = sizeof(ULONG) * m_indexCount;
-	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	ibd.CPUAccessFlags = 0;
-	ibd.MiscFlags = 0;
-	ibd.StructureByteStride = 0;
+	m_indexBuffers.resize(m_materials.size());
+	for (UINT i = 0; i < m_materials.size(); ++i)
+	{
+		// Create description of static index buffer
+		D3D11_BUFFER_DESC ibd;
+		ZeroMemory(&ibd, sizeof(ibd));
+		ibd.Usage = D3D11_USAGE_DEFAULT;
+		ibd.ByteWidth = sizeof(ULONG) * m_materials[i]->GetIndices().size();
+		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ibd.CPUAccessFlags = 0;
+		ibd.MiscFlags = 0;
+		ibd.StructureByteStride = 0;
 
-	D3D11_SUBRESOURCE_DATA indexData;
-	ZeroMemory(&indexData, sizeof(indexData));
-	indexData.pSysMem = indices;
-	indexData.SysMemPitch = 0;
-	indexData.SysMemSlicePitch = 0;
+		D3D11_SUBRESOURCE_DATA indexData;
+		ZeroMemory(&indexData, sizeof(indexData));
+		indexData.pSysMem = m_materials[i]->GetIndices().data();
+		indexData.SysMemPitch = 0;
+		indexData.SysMemSlicePitch = 0;
 
-	result = device->CreateBuffer(&ibd, &indexData, &m_indexBuffer);
-	if (FAILED(result))
-		return false;
+		HRESULT result = device->CreateBuffer(&ibd, &indexData, &m_indexBuffers[i]);
+	}
 
 	delete[] vertices;
 	vertices = nullptr;
-	delete[] indices;
-	indices = nullptr;
 
 	return true;
 }
 
-int ModelClass::GetIndexCount()
+int ModelClass::GetIndexCount(UINT materialIndex)
 {
-	return m_indexCount;
+	return m_materials[materialIndex]->GetIndexCount();
+}
+
+bool ModelClass::IsOpaque(UINT materialIndex)
+{
+	return m_materials[materialIndex]->IsOpaque();
 }
 
 XMMATRIX ModelClass::GetWorldMatrix()
@@ -88,11 +94,6 @@ XMMATRIX ModelClass::GetWorldMatrix()
 
 void ModelClass::Shutdown()
 {
-	if (m_indexBuffer)
-	{
-		m_indexBuffer->Release();
-		m_indexBuffer = nullptr;
-	}
 	if (m_vertexBuffer)
 	{
 		m_vertexBuffer->Release();
@@ -100,26 +101,33 @@ void ModelClass::Shutdown()
 	}
 }
 
-void ModelClass::Render(ID3D11DeviceContext* deviceContext)
+void ModelClass::SetVertices(ID3D11DeviceContext* deviceContext)
 {
 	UINT stride = sizeof(VertexType);
 	UINT offset = 0;
-
-	// Set vertex and index buffers to active
+	
 	deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
-	deviceContext->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 	// Set type of primitive to be rendered
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
-bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const char* filename, float scaleFac)
+void ModelClass::Render(ID3D11Device* device, ID3D11DeviceContext* deviceContext, UINT materialIndex)
+{
+	// Set vertex and index buffers to active
+	deviceContext->IASetIndexBuffer(m_indexBuffers[materialIndex], DXGI_FORMAT_R32_UINT, 0);
+
+	ID3D11ShaderResourceView* srv = m_materials[materialIndex]->GetTexture(0);
+	deviceContext->PSSetShaderResources(0, 1, &srv);
+}
+
+bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContext, VertexType*& outVertices, const char* filename)
 {
 	std::vector<VertexType> vertices;
-	std::vector<ULONG> indices;
 	
 	auto ext =
-		fastgltf::Extensions::KHR_mesh_quantization;
+		fastgltf::Extensions::KHR_mesh_quantization |
+		fastgltf::Extensions::KHR_texture_transform;
 	
 	fastgltf::Parser parser{ ext };
 	std::filesystem::path filePath(filename);
@@ -129,10 +137,24 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 		return false;
 
 	auto asset = parser.loadGltfBinary(data.get(), filePath.parent_path(), fastgltf::Options::None);
-	if (!asset)
+	if (asset.error() != fastgltf::Error::None)
 		return false;
 
-	size_t defaultScene = 0;
+	// Set up materials
+	for (UINT i = 0; i < asset->materials.size(); ++i)
+	{
+		m_materials.push_back(std::make_unique<MaterialClass>());
+		
+		m_materials[i]->SetOpaque(asset->materials[i].alphaMode == fastgltf::AlphaMode::Opaque);
+		if (asset->materials[i].pbrData.baseColorTexture.has_value())
+		{
+			m_materials[i]->SetTexture(0, LoadTextureFromIndex(device, deviceContext, &asset.get(), i));
+		}
+
+
+	}
+
+	UINT defaultScene = 0;
 	if (asset->defaultScene.has_value())
 		defaultScene = asset->defaultScene.value();
 	
@@ -146,7 +168,7 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 		const auto& trs = std::get<fastgltf::TRS>(node.transform); // TODO: check, may not work for all models?
 
 		for (const auto& primitive : mesh.primitives) {
-			size_t baseVertex = vertices.size();
+			UINT baseVertex = vertices.size();
 
 			// === Indices ===
 			std::vector<uint32_t> localIndices;
@@ -154,7 +176,7 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 				auto& accessor = asset->accessors[*primitive.indicesAccessor];
 				localIndices.resize(accessor.count);
 				fastgltf::iterateAccessorWithIndex<uint32_t>(asset.get(), accessor,
-					[&](uint32_t val, size_t i) {
+					[&](uint32_t val, UINT i) {
 						localIndices[i] = static_cast<ULONG>(val);
 					});
 			}
@@ -169,7 +191,7 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 				auto& accessor = asset->accessors[it->accessorIndex];
 				positions.resize(accessor.count);
 				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec3>(asset.get(), accessor,
-					[&](fastgltf::math::fvec3 val, size_t i) {
+					[&](fastgltf::math::fvec3 val, UINT i) {
 						positions[i] = val;
 					});
 			}
@@ -179,7 +201,7 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 				auto& accessor = asset->accessors[it->accessorIndex];
 				normals.resize(accessor.count);
 				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec3>(asset.get(), accessor,
-					[&](fastgltf::math::fvec3 val, size_t i) {
+					[&](fastgltf::math::fvec3 val, UINT i) {
 						normals[i] = val;
 					});
 			}
@@ -189,15 +211,42 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 				auto& accessor = asset->accessors[it->accessorIndex];
 				uvs.resize(accessor.count);
 				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec2>(asset.get(), accessor,
-					[&](fastgltf::math::fvec2 val, size_t i) {
+					[&](fastgltf::math::fvec2 val, UINT i) {
 						uvs[i] = val;
 					});
 			}
 
+			// Transform UVs
+			if (primitive.materialIndex.has_value())
+			{
+				const auto& mat = asset->materials[primitive.materialIndex.value()];
+				if (mat.pbrData.baseColorTexture.has_value())
+				{
+					const auto& baseColorTexture = mat.pbrData.baseColorTexture.value();
+					auto transform = baseColorTexture.transform.get();
+
+					for (auto& uv : uvs)
+					{
+						uv *= transform->uvScale;
+
+						float cosR = std::cos(transform->rotation);
+						float sinR = std::sin(transform->rotation);
+						float x = uv[0];
+						float y = uv[1];
+						uv[0] = cosR * x - sinR * y;
+						uv[1] = sinR * x + cosR * y;
+
+						uv += transform->uvOffset;
+					}
+				}
+				else continue;
+			}
+			else continue;
+
 			// Assemble vertices 
-			size_t count = positions.size();  // assume all attributes match count
+			UINT count = positions.size();  // assume all attributes match count
 			vertices.reserve(vertices.size() + count);
-			for (size_t i = 0; i < count; ++i) {
+			for (UINT i = 0; i < count; ++i) {
 				//positions[i] *= scaleFac; // TODO: clean up temp workaround
 
 				/* HANDLE TRANSFORMATION */
@@ -207,24 +256,25 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 
 				VertexType v = {
 					i < positions.size() ? DirectX::XMFLOAT3(positions[i][0], positions[i][1], positions[i][2]) : DirectX::XMFLOAT3(0,0,0),
-					i < uvs.size() ? DirectX::XMFLOAT2(uvs[i][0], uvs[i][1]) : DirectX::XMFLOAT2(0,0),
+					i < uvs.size() ? DirectX::XMFLOAT2(uvs[i][0], uvs[i][1]) : DirectX::XMFLOAT2(0,0), // TODO: figure out why
 					i < normals.size() ? DirectX::XMFLOAT3(normals[i][0], normals[i][1], normals[i][2]) : DirectX::XMFLOAT3(0,0,0)
 				};
 				vertices.push_back(v);
 			}
 
 			for (uint32_t localIdx : localIndices) {
-				indices.push_back(static_cast<ULONG>(localIdx + baseVertex));
+				UINT index = 0;
+				if (primitive.materialIndex.has_value())
+					index = primitive.materialIndex.value();
+
+				m_materials[index]->AddIndex(static_cast<UINT>(localIdx + baseVertex));
 			}
 		}
 	}
 
-	// TODO: send vertices and indices to outVertices and outIndices
+	// TODO: send vertices to outVertices
 	m_vertexCount = vertices.size();
-	m_indexCount = indices.size();
-
 	outVertices = new VertexType[m_vertexCount];
-	outIndices = new ULONG[m_indexCount];
 
 	//std::memcpy(outVertices, vertices.data(), m_vertexCount * sizeof(VertexType));
 	std::copy(
@@ -232,12 +282,53 @@ bool ModelClass::LoadGLB(VertexType*& outVertices, ULONG*& outIndices, const cha
 		vertices.end(),
 		outVertices
 	);
-	std::memcpy(outIndices, indices.data(), m_indexCount * sizeof(ULONG));
 	
 	return true;
 }
 
-bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const char* filename)
+ID3D11ShaderResourceView* ModelClass::LoadTextureFromIndex(ID3D11Device* device, ID3D11DeviceContext* context, fastgltf::Asset* asset, UINT materialIndex)
+{
+	ID3D11ShaderResourceView* outSRV;
+
+	auto textureIndex = asset->materials[materialIndex].pbrData.baseColorTexture.value().textureIndex;
+	if (!asset->textures[textureIndex].imageIndex.has_value())
+		return false;
+
+	const auto& imageIndex = asset->textures[textureIndex].imageIndex.value();
+	const auto& image = asset->images[imageIndex];
+
+	if (std::holds_alternative<fastgltf::sources::BufferView>(image.data)) {
+		const auto& bufferViewImage = std::get<fastgltf::sources::BufferView>(image.data);
+
+		const auto& bufferView = asset->bufferViews[bufferViewImage.bufferViewIndex];
+		const auto& buffer = asset->buffers[bufferView.bufferIndex];
+		
+		const auto& bufferArray = std::get<fastgltf::sources::Array>(buffer.data);
+		const uint8_t* imageData = reinterpret_cast<const uint8_t*>(bufferArray.bytes.data()) + bufferView.byteOffset;
+		size_t imageSize = bufferView.byteLength;
+
+		HRESULT hr = DirectX::CreateWICTextureFromMemory(
+			device,
+			context,
+			imageData,
+			imageSize,
+			nullptr,    // [out] ID3D11Resource** (optional)
+			&outSRV     // [out] SRV
+		);
+		if (FAILED(hr))
+		{
+			OutputDebugStringA("Failed to CreateWICTextureFromMemory\n");
+			return nullptr;
+		}
+
+		return outSRV;
+	}
+
+
+	return nullptr;
+}
+
+bool ModelClass::LoadPLY(VertexType*& outVertices, const char* filename)
 {
 	miniply::PLYReader reader(filename);
 
@@ -268,9 +359,11 @@ bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const cha
 		}
 		else if (!gotFaces && reader.element_is(miniply::kPLYFaceElement) && reader.load_element())
 		{
-			m_indexCount = reader.num_rows() * 3;
-			outIndices = new ULONG[m_indexCount];
+			UINT indexCount = reader.num_rows() * 3;
+			UINT* outIndices = new UINT[indexCount];
 			reader.extract_properties(faceIdxs, 3, miniply::PLYPropertyType::Int, outIndices);
+
+			m_materials[0]->SetIndices(outIndices, indexCount);
 			gotFaces = true;
 		}
 		if (gotVerts && gotFaces)
@@ -289,52 +382,18 @@ bool ModelClass::LoadPLY(VertexType*& outVertices, ULONG*& outIndices, const cha
 	return true;
 }
 
-bool ModelClass::CalculateNormals(VertexType* vertices, ULONG* indices)
-{
+bool ModelClass::CalculateNormals(VertexType* vertices)
+{	
+	auto indices = m_materials[0]->GetIndices();
+	
 	// Initialize all normals to zero
 	for (ULONG i = 0; i < m_vertexCount; ++i)
 	{
 		vertices[i].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	}
 
-	// Calculate normals for each face and add them to associated vertices
-	/*for (ULONG i = 0; i < m_indexCount; i += 3)
-	{
-		ULONG i0 = indices[i];
-		ULONG i1 = indices[i+1];
-		ULONG i2 = indices[i+2];
-		// THANKS POITA FROM DEVMASTER 2010
-		XMVECTOR v[3] = {
-			XMLoadFloat3(&vertices[i0].position),
-			XMLoadFloat3(&vertices[i1].position),
-			XMLoadFloat3(&vertices[i2].position)
-		};
-
-		// Calculate the cross product to get the normal vector
-		XMVECTOR normal = XMVector3Cross(v[1]-v[0], v[1]-v[2]);
-
-		// Store the normal temporarily
-		XMFLOAT3 faceNormal;
-		XMStoreFloat3(&faceNormal, normal);
-
-		for (int j = 0; j < 3; ++j)
-		{
-			XMVECTOR a = v[(j + 1) % 3] - v[j];
-			XMVECTOR b = v[(j + 2) % 3] - v[j];
-
-			float dot = XMVectorGetX(XMVector3Dot(a, b));
-			float lenA = XMVectorGetX(XMVector3Length(a));
-			float lenB = XMVectorGetX(XMVector3Length(b));
-			float weight = acos(dot / (lenA * lenB));
-
-			XMVECTOR current = XMLoadFloat3(&vertices[indices[i + j]].normal);
-			current += weight * normal;
-			XMStoreFloat3(&vertices[indices[i + j]].normal, current);
-		}
-	}*/
-
 	// Loop over each triangle
-	for (size_t i = 0; i < m_indexCount; i += 3) {
+	for (UINT i = 0; i < m_materials[0]->GetIndexCount(); i += 3) {
 		ULONG i0 = indices[i];
 		ULONG i1 = indices[i + 1];
 		ULONG i2 = indices[i + 2];
@@ -370,9 +429,20 @@ bool ModelClass::CalculateNormals(VertexType* vertices, ULONG* indices)
 	return true;
 }
 
-bool ModelClass::CalculateUVs(VertexType* vertices, ULONG* indices) {
+bool ModelClass::DummyUVs(VertexType* vertices)
+{
 	for (UINT i = 0; i < m_vertexCount; ++i)
 		vertices[i].uv = XMFLOAT2(0.0f, 0.0f);
 
 	return true;
+}
+
+bool ModelClass::CalculateModelVectors(VertexType* vertices)
+{
+	return true;
+}
+
+UINT ModelClass::GetMaterialCount() const
+{
+	return m_materials.size();
 }
