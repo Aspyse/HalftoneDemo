@@ -8,7 +8,7 @@
 
 <p align="center">
  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Aspyse/HalftoneDemo">
- <a href="https://opensource.org/license/mit"><img src="https://img.shields.io/github/license/Aspyse/research-support-hub"></a>
+ <a href="https://opensource.org/license/mit"><img src="https://img.shields.io/github/license/Aspyse/HalftoneDemo"></a>
 </p>
 
 <p align="center">User-friendly, no-code methods for developing real-time applications with non-photorealistic rendering. Control intuitive parameters, then chain render passes and render textures to create a custom multi-pass pipeline.</p>
