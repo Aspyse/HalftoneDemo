@@ -55,7 +55,7 @@ add_executable(
   "include/imgui/backends/imgui_impl_dx11.cpp"
   "include/imgui/backends/imgui_impl_win32.cpp"
   "include/miniply/miniply.cpp"
-   "Shaders/RenderPasses/render_pass.cpp" "Classes/material.h")
+   "Shaders/RenderPasses/render_pass.cpp" "Classes/material.h" "Classes/material.cpp")
 
 target_include_directories(
   HalftoneDemo

@@ -10,14 +10,15 @@ struct VertexInputType
     float3 position : POSITION;
     float2 uv : TEXCOORD0;
     float3 normal : NORMAL;
-    float3 tangent : TANGENT;
-    float3 binormal : BINORMAL;
+    float4 tangent : TANGENT;
 };
 
 struct PixelInputType
 {
     float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float2 albedoUV : TEXCOORD0;
+    float2 normalUV : TEXCOORD1;
+    float2 roughUV : TEXCOORD2;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float3 binormal : BINORMAL;
@@ -33,14 +34,23 @@ PixelInputType GeometryVertexShader(VertexInputType input)
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
 
-    //output.normal = normalize(mul(input.normal, (float3x3)viewMatrix));
-    output.normal = normalize(input.normal);
+    float3 N = normalize(input.normal);
     
-    output.tangent = normalize(input.tangent);
+    float3 T = input.tangent.xyz;
+    T = normalize(T - N * dot(N, T));
     
-    output.binormal = normalize(input.binormal);
+    float3 B = cross(N, T) * input.tangent.w;
+    B = normalize(B);
+    
+    
+    output.normal = N;
+    output.tangent = T;
+    output.binormal = B;
 
-    output.uv = input.uv;
+    // TODO
+    output.albedoUV = input.uv;
+    output.normalUV = input.uv;
+    output.roughUV = input.uv;
 
     return output;
 }

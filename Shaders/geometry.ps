@@ -19,7 +19,9 @@ cbuffer MaterialBuffer : register(b0)
 struct PixelInputType
 {
 	float4 position : SV_POSITION;
-	float2 uv : TEXCOORD0;
+    float2 albedoUV : TEXCOORD0;
+    float2 normalUV : TEXCOORD1;
+    float2 roughUV : TEXCOORD2;
 	float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float3 binormal : BINORMAL;
@@ -35,21 +37,20 @@ PixelOutputType GeometryPixelShader(PixelInputType input) : SV_TARGET
 {
     PixelOutputType output;
     
-    float4 texAlbedo = albedoTexture.Sample(samplerState, input.uv);
+    float4 texAlbedo = albedoTexture.Sample(samplerState, input.albedoUV);
     float4 albedo = useAlbedoTexture ? texAlbedo : float4(albedoColor, 1);
 	output.albedo = albedo;
 
-    float rough = useRoughnessTexture ? roughnessTexture.Sample(samplerState, input.uv).r : roughness;
+    float rough = useRoughnessTexture ? roughnessTexture.Sample(samplerState, input.roughUV).g : roughness;
     
-    float4 bumpMap = normalTexture.Sample(samplerState, input.uv);
+    float4 bumpMap = normalTexture.Sample(samplerState, input.normalUV);
     bumpMap = bumpMap * 2 - 1;
     
     float3 normal = bumpMap.x * input.tangent + bumpMap.y * input.binormal + bumpMap.z * input.normal;
     
     normal = useNormalTexture ? normal : input.normal;
     
-    normal = mul(normal, (float3x3) viewMatrix);
-    normal = normalize(normal);
+    normal = mul(normalize(normal), (float3x3) viewMatrix);
     normal = normal * 0.5f + 0.5f;
     output.normal = float4(normal, rough);
 

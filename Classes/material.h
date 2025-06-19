@@ -1,52 +1,41 @@
 #pragma once
 
 #include <d3d11.h>
+#include <DirectXMath.h>
 #include <vector>
 
 class MaterialClass
 {
 public:
+	struct TexTransform
+	{
+		DirectX::XMFLOAT2 offset;
+		DirectX::XMFLOAT2 scale;
+		float rotation;
+	};
+
 	MaterialClass() {};
 	
-	void AddIndex(UINT index)
-	{
-		m_indices.push_back(index);
-	}
-	void SetIndices(UINT* indices, UINT indexCount)
-	{
-		m_indices.assign(indices, indices+indexCount);
-	}
-	const std::vector<UINT>& GetIndices() const
-	{
-		return m_indices;
-	}
-	UINT GetIndexCount()
-	{
-		return m_indices.size();
-	}
+	void AddIndex(UINT);
+	void SetIndices(UINT*, UINT);
+	const std::vector<UINT>& GetIndices() const;
+	UINT GetIndexCount();
 
-	void SetTexture(UINT index, ID3D11ShaderResourceView* texture)
-	{
-		m_textures[index] = texture;
-	}
-	ID3D11ShaderResourceView* GetTexture(UINT index) const
-	{
-		return m_textures[index];
-	}
+	void SetTexture(UINT, ID3D11ShaderResourceView*);
+	ID3D11ShaderResourceView* GetTexture(UINT) const;
 
-	void SetOpaque(bool isOpaque)
-	{
-		m_isOpaque = isOpaque;
-	}
-	bool IsOpaque()
-	{
-		return m_isOpaque;
-	}
+	void SetUseTexture(UINT, bool);
+	bool GetUseTexture(UINT) const;
+
+	void SetOpaque(bool);
+	bool IsOpaque() const;
 
 private:
 	// [0] = albedo, [1] = normal, [2] = roughness
 	ID3D11ShaderResourceView* m_textures[3] = { nullptr, nullptr, nullptr };
+	bool m_useTextures[3] = { true, true, true };
 
+	TexTransform m_albedoTransform;
 	std::vector<UINT> m_indices;
 
 	bool m_isOpaque = true;

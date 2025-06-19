@@ -3,7 +3,7 @@ Texture2D normalRoughnessTexture : register(t1);
 Texture2D depthTexture : register(t2);
 Texture2D shadowMap : register(t3);
 
-SamplerState pointClamp : register(s0);
+SamplerState samplerState : register(s0);
 SamplerComparisonState shadowSampler : register(s1); // D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR and ComparisonFunc = LESS_EQUAL
 
 cbuffer MatrixBuffer : register(b0)
@@ -31,7 +31,7 @@ struct PixelInputType
 
 float3 ReconstructViewPos(float2 uv)
 {
-	float depth = depthTexture.Sample(pointClamp, uv).r;
+	float depth = depthTexture.Sample(samplerState, uv).r;
 	uv = uv * 2 - 1;
 	uv.y = -uv.y;
 	float4 clipPos = float4(uv, depth, 1);
@@ -41,7 +41,7 @@ float3 ReconstructViewPos(float2 uv)
 }
 float ShadowVisibility(float4 worldPos, float bias)
 {
-	float4 lightPos = mul(float4(worldPos, 1), lightViewProj);
+	float4 lightPos = mul(worldPos, lightViewProj);
 
 	float3 uv = lightPos.xyz / lightPos.w;
 	float2 shadowMapUV = float2(0.5f + uv.x * 0.5f, 0.5f - uv.y * 0.5f);
@@ -52,8 +52,8 @@ float ShadowVisibility(float4 worldPos, float bias)
 float4 PostprocessShader(PixelInputType input) : SV_TARGET
 {
 	const float PI = 3.14159;
-    float4 albedo = albedoTexture.Sample(pointClamp, input.uv);
-	float4 nr = normalRoughnessTexture.Sample(pointClamp, input.uv);
+    float4 albedo = albedoTexture.Sample(samplerState, input.uv);
+	float4 nr = normalRoughnessTexture.Sample(samplerState, input.uv);
 	float3 normal = normalize(nr.rgb * 2 - 1);
 	float alpha = max(nr.a, 0.01);
     alpha *= alpha; // artist control
@@ -66,11 +66,11 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	// DEBUG
 	//return float4(albedo, 1.0);
 	//return float4(viewPos.rgb, 1);
-	//return float4(shadowMap.SampleLevel(pointClamp, input.uv, 0).rrr,1);
+	//return float4(shadowMap.SampleLevel(samplerState, input.uv, 0).rrr,1);
 
 	/* AMBIENT */
     float4 ambient = albedo * float4(ambientColor, 1);
-    float depth = depthTexture.Sample(pointClamp, input.uv).r;
+    float depth = depthTexture.Sample(samplerState, input.uv).r;
     if (depth == 1)
         return ambient;
 	
@@ -106,8 +106,8 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
     float3 diffuse = (1.0 - F) * albedo / PI;
 
 	/* OUTPUT */
-    float3 color = (diffuse * saturate(vis + 0.1 * length(ambientColor)) + specular * vis) * lightColor * NdotL;
+    float3 color = (diffuse + specular) * lightColor * NdotL * vis;
 
-	//return float4(shadowMap.Sample(pointClamp, input.uv).rgb, 1);
+    //return shadowMap.Sample(samplerState, input.uv);
     return float4(color, 1) + ambient;
 };

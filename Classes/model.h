@@ -9,6 +9,7 @@
 
 using DirectX::XMFLOAT2;
 using DirectX::XMFLOAT3;
+using DirectX::XMFLOAT4;
 using DirectX::XMMATRIX;
 
 class ModelClass
@@ -19,8 +20,7 @@ private:
 		XMFLOAT3 position;
 		XMFLOAT2 uv;
 		XMFLOAT3 normal;
-		XMFLOAT3 tangent;
-		XMFLOAT3 binormal;
+		XMFLOAT4 tangent;
 	};
 
 public:
@@ -33,9 +33,11 @@ public:
 	void SetVertices(ID3D11DeviceContext*);
 	void Render(ID3D11Device*, ID3D11DeviceContext*, UINT);
 
-	int GetIndexCount(UINT);
+	int GetIndexCount(UINT) const;
 	bool IsOpaque(UINT);
 	XMMATRIX GetWorldMatrix();
+
+	bool GetUseTexture(UINT, UINT) const;
 
 	UINT GetMaterialCount() const;
 

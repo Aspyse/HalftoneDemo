@@ -89,7 +89,7 @@ bool GeometryPass::CompileShader(ID3D11Device* device)
     if (FAILED(result))
         return false;
 
-    D3D11_INPUT_ELEMENT_DESC pl[5];
+    D3D11_INPUT_ELEMENT_DESC pl[4];
     pl[0].SemanticName = "POSITION";
     pl[0].SemanticIndex = 0;
     pl[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
@@ -121,14 +121,6 @@ bool GeometryPass::CompileShader(ID3D11Device* device)
     pl[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
     pl[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     pl[3].InstanceDataStepRate = 0;
-
-    pl[4].SemanticName = "BINORMAL";
-    pl[4].SemanticIndex = 0;
-    pl[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    pl[4].InputSlot = 0;
-    pl[4].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-    pl[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    pl[4].InstanceDataStepRate = 0;
 
 
     UINT numElements = sizeof(pl) / sizeof(pl[0]);
@@ -355,7 +347,7 @@ void GeometryPass::Shutdown()
     }
 }
 
-bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness)
+bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness, bool useAlbedo, bool useNormal, bool useRoughness)
 {
     //roughness *= roughness;
     
@@ -366,7 +358,9 @@ bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMAT
 
     MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
     dataPtr2->roughness = roughness;
-    dataPtr2->useAlbedoTexture = true;
+    dataPtr2->useAlbedoTexture = useAlbedo;
+    dataPtr2->useNormalTexture = useNormal;
+    dataPtr2->useRoughnessTexture = useRoughness;
     dataPtr2->albedoColor = albedoColor;
     dataPtr2->viewMatrix = XMMatrixTranspose(viewMatrix);
 
@@ -516,11 +510,11 @@ bool GeometryPass::RenderShadow(ID3D11DeviceContext* deviceContext, int indexCou
 {
     // Set up light source
     XMVECTOR target = XMVectorZero(); // TODO
-    XMVECTOR lightPos = target - lightDirection * 12.0f;
+    XMVECTOR lightPos = target - lightDirection * 30.0f;
     XMVECTOR up = XMVectorSet(0, 1, 0, 0);
     XMMATRIX lightView = XMMatrixLookAtLH(lightPos, target, up);
 
-    XMMATRIX lightProj = XMMatrixOrthographicLH(24.0f, 24.0f, 0.01f, 24.0f); // TODO: Adjust
+    XMMATRIX lightProj = XMMatrixOrthographicLH(60.0f, 60.0f, 0.01f, 80.0f); // TODO: Adjust
 
     m_lightViewProj = XMMatrixMultiply(lightView, lightProj);
     

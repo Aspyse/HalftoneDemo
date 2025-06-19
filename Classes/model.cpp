@@ -76,7 +76,7 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 	return true;
 }
 
-int ModelClass::GetIndexCount(UINT materialIndex)
+int ModelClass::GetIndexCount(UINT materialIndex) const
 {
 	return m_materials[materialIndex]->GetIndexCount();
 }
@@ -90,6 +90,11 @@ XMMATRIX ModelClass::GetWorldMatrix()
 {
 	// TODO: actually handle
 	return XMMatrixIdentity();
+}
+
+bool ModelClass::GetUseTexture(UINT index, UINT textureIndex) const
+{
+	return m_materials[index]->GetUseTexture(textureIndex);
 }
 
 void ModelClass::Shutdown()
@@ -117,8 +122,13 @@ void ModelClass::Render(ID3D11Device* device, ID3D11DeviceContext* deviceContext
 	// Set vertex and index buffers to active
 	deviceContext->IASetIndexBuffer(m_indexBuffers[materialIndex], DXGI_FORMAT_R32_UINT, 0);
 
-	ID3D11ShaderResourceView* srv = m_materials[materialIndex]->GetTexture(0);
-	deviceContext->PSSetShaderResources(0, 1, &srv);
+	ID3D11ShaderResourceView* srv[3] = {
+		m_materials[materialIndex]->GetTexture(0),
+		m_materials[materialIndex]->GetTexture(1),
+		m_materials[materialIndex]->GetTexture(2)
+	};
+	deviceContext->PSSetShaderResources(0, 3, srv);
+
 }
 
 bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContext, VertexType*& outVertices, const char* filename)
@@ -148,10 +158,50 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 		m_materials[i]->SetOpaque(asset->materials[i].alphaMode == fastgltf::AlphaMode::Opaque);
 		if (asset->materials[i].pbrData.baseColorTexture.has_value())
 		{
-			m_materials[i]->SetTexture(0, LoadTextureFromIndex(device, deviceContext, &asset.get(), i));
+			const auto& baseColorTexture = asset->materials[i].pbrData.baseColorTexture.value();
+
+			auto transform = baseColorTexture.transform.get();
+			MaterialClass::TexTransform albedoTransform;
+			albedoTransform.offset.x = transform->uvOffset.x();
+			albedoTransform.offset.y = transform->uvOffset.y();
+			albedoTransform.scale.x = transform->uvScale.x();
+			albedoTransform.scale.y = transform->uvScale.y();
+			albedoTransform.rotation = transform->rotation;
+
+			auto textureIndex = baseColorTexture.textureIndex;
+
+			if (!asset->textures[textureIndex].imageIndex.has_value())
+				break;
+			const auto& imageIndex = asset->textures[textureIndex].imageIndex.value();
+			
+			m_materials[i]->SetTexture(0, LoadTextureFromIndex(device, deviceContext, &asset.get(), imageIndex));
 		}
 
+		if (asset->materials[i].normalTexture.has_value())
+		{
+			auto textureIndex = asset->materials[i].normalTexture.value().textureIndex;
 
+			if (!asset->textures[textureIndex].imageIndex.has_value())
+				break;
+			const auto& imageIndex = asset->textures[textureIndex].imageIndex.value();
+			
+			m_materials[i]->SetTexture(1, LoadTextureFromIndex(device, deviceContext, &asset.get(), imageIndex));
+		}
+		else
+			m_materials[i]->SetUseTexture(1, false);
+
+		if (asset->materials[i].pbrData.metallicRoughnessTexture.has_value())
+		{
+			auto textureIndex = asset->materials[i].pbrData.metallicRoughnessTexture.value().textureIndex;
+
+			if (!asset->textures[textureIndex].imageIndex.has_value())
+				break;
+			const auto& imageIndex = asset->textures[textureIndex].imageIndex.value();
+
+			m_materials[i]->SetTexture(2, LoadTextureFromIndex(device, deviceContext, &asset.get(), imageIndex));
+		}
+		else
+			m_materials[i]->SetUseTexture(2, false);
 	}
 
 	UINT defaultScene = 0;
@@ -184,6 +234,7 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 			// === Attributes ===
 			std::vector<fastgltf::math::fvec3> positions;
 			std::vector<fastgltf::math::fvec3> normals;
+			std::vector<fastgltf::math::fvec4> tangents;
 			std::vector<fastgltf::math::fvec2> uvs;
 
 			// POSITION
@@ -206,6 +257,16 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 					});
 			}
 
+			// TANGENT
+			if (auto it = primitive.findAttribute("TANGENT"); it != primitive.attributes.end()) {
+				auto& accessor = asset->accessors[it->accessorIndex];
+				tangents.resize(accessor.count);
+				fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec4>(asset.get(), accessor,
+					[&](fastgltf::math::fvec4 val, UINT i) {
+						tangents[i] = val;
+					});
+			}
+
 			// TEXCOORD_0
 			if (auto it = primitive.findAttribute("TEXCOORD_0"); it != primitive.attributes.end()) {
 				auto& accessor = asset->accessors[it->accessorIndex];
@@ -224,7 +285,7 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 				{
 					const auto& baseColorTexture = mat.pbrData.baseColorTexture.value();
 					auto transform = baseColorTexture.transform.get();
-
+					
 					for (auto& uv : uvs)
 					{
 						uv *= transform->uvScale;
@@ -257,7 +318,8 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 				VertexType v = {
 					i < positions.size() ? DirectX::XMFLOAT3(positions[i][0], positions[i][1], positions[i][2]) : DirectX::XMFLOAT3(0,0,0),
 					i < uvs.size() ? DirectX::XMFLOAT2(uvs[i][0], uvs[i][1]) : DirectX::XMFLOAT2(0,0), // TODO: figure out why
-					i < normals.size() ? DirectX::XMFLOAT3(normals[i][0], normals[i][1], normals[i][2]) : DirectX::XMFLOAT3(0,0,0)
+					i < normals.size() ? DirectX::XMFLOAT3(normals[i][0], normals[i][1], normals[i][2]) : DirectX::XMFLOAT3(0,0,0),
+					i < tangents.size() ? DirectX::XMFLOAT4(tangents[i][0],tangents[i][1], tangents[i][2], tangents[i][3]) : DirectX::XMFLOAT4(0,0,0,0)
 				};
 				vertices.push_back(v);
 			}
@@ -286,15 +348,10 @@ bool ModelClass::LoadGLB(ID3D11Device* device, ID3D11DeviceContext* deviceContex
 	return true;
 }
 
-ID3D11ShaderResourceView* ModelClass::LoadTextureFromIndex(ID3D11Device* device, ID3D11DeviceContext* context, fastgltf::Asset* asset, UINT materialIndex)
+ID3D11ShaderResourceView* ModelClass::LoadTextureFromIndex(ID3D11Device* device, ID3D11DeviceContext* context, fastgltf::Asset* asset, UINT imageIndex)
 {
 	ID3D11ShaderResourceView* outSRV;
 
-	auto textureIndex = asset->materials[materialIndex].pbrData.baseColorTexture.value().textureIndex;
-	if (!asset->textures[textureIndex].imageIndex.has_value())
-		return false;
-
-	const auto& imageIndex = asset->textures[textureIndex].imageIndex.value();
 	const auto& image = asset->images[imageIndex];
 
 	if (std::holds_alternative<fastgltf::sources::BufferView>(image.data)) {

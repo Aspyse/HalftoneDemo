@@ -42,7 +42,7 @@ public:
 	bool InitializeGBuffer(ID3D11Device*, UINT, UINT);
 	void Shutdown();
 
-	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, float); // TODO: take in texture
+	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, float, bool, bool, bool); // TODO: take in texture
 
 	void ClearGBuffer(ID3D11DeviceContext*, float*);
 	void Render(ID3D11DeviceContext*, int);

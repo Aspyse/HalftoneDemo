@@ -177,7 +177,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 			// Reset after viewport is set to shadowmap size
 			ResetViewport(m_screenWidth, m_screenHeight);
 
-			m_geometryPass->SetShaderParameters(m_deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoColor, rParams.roughness);
+			m_geometryPass->SetShaderParameters(m_deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoColor, rParams.roughness, model->GetUseTexture(i, 0), model->GetUseTexture(i, 1), model->GetUseTexture(i, 2));
 			m_geometryPass->Render(m_deviceContext, model->GetIndexCount(i));
 		}
 	}
