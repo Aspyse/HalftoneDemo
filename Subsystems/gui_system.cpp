@@ -48,7 +48,7 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 		ImGui::Begin("Scene Controls");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 
-		ImGui::DragFloat("Vertical FOV", &rParams.verticalFOV, 0.002f, 10, 90);
+		ImGui::DragFloat("Vertical FOV", &rParams.verticalFOV, 0.2f, 10, 90);
 		ImGui::DragFloat("Near Z", &rParams.nearZ, 0.002f, 0.001, 10);
 		ImGui::DragFloat("Far Z", &rParams.farZ, 0.2f, 10, 1000);
 		ImGui::Separator();

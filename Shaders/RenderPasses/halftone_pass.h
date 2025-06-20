@@ -21,7 +21,7 @@ private:
 
 		XMFLOAT3 channelOffsets;
 
-		float padding[2];
+		float padding[3];
 	};
 
 public:

@@ -5,10 +5,13 @@ cbuffer HalftoneBuffer : register(b0)
 {
 	float2 subdivisions;
 	bool isMonotone;
+    float pad0;
+	
 	float3 dotColor;
+    float pad1;
+	
 	float3 channelAngles;
-
-	float pad;
+	float pad2;
 };
 
 struct PixelInputType
@@ -16,6 +19,8 @@ struct PixelInputType
 	float2 uv : TEXCOORD0;
 	float4 position : SV_POSITION;
 };
+
+static const float smoothness = 0.05;
 
 float2 GetCenterUV(float2 uv, float rotation)
 {
@@ -32,35 +37,44 @@ float2 GetCenterUV(float2 uv, float rotation)
 	return mul(rotUV, invRot);
 }
 
-float4 GetBrightness(float2 pixelPos, float2 subdivisions, float2 centerPos)
+float4 GetBrightness(float2 pixelPos, float rotation)
 {
-	float2 centerUV = centerPos * subdivisions;
+    float2 centerPos = GetCenterUV(pixelPos, rotation);
+    float2 centerUV = centerPos * subdivisions;
 
 	float2 delta = centerPos - pixelPos;
 	float pixelDist = length(delta);
-	pixelDist = pixelDist/0.7071; // fix magic number
+	pixelDist = pixelDist / 0.7071; // fix magic number
 
-	// skips a sqrt
-	/*float pixelDist = dot(delta, delta);
-	pixelDist = pixelDist/0.5;*/
-
-	float4 baseColor = inputTexture.Sample(samplerState, centerUV);
-	float4 cmy = 1.0 - baseColor;
-
-	return (pixelDist >= cmy) ? 1 : 0;
+	float4 baseColor = inputTexture.SampleLevel(samplerState, centerUV, 0);
+	
+	// Closest X neighbor
+    float2 xPixelPos = float2(pixelPos.x - 1, pixelPos.y);
+    float2 xCenterPos = GetCenterUV(xPixelPos, rotation);
+    float2 xCenterUV = xCenterPos * subdivisions;
+	
+    float2 xDelta = xCenterPos - pixelPos; // distance to neighbor center
+    float xPixelDist = length(xDelta);
+    xPixelDist = xPixelDist / 0.7071;
+	
+    float4 xBaseColor = inputTexture.SampleLevel(samplerState, xCenterUV, 0);
+	
+	// TODO: Closest Y neighbor
+    float4 cmy = (baseColor < xBaseColor) ? baseColor : xBaseColor;
+	
+    cmy = 1 - cmy;
+    return smoothstep(cmy - smoothness, cmy + smoothness, pixelDist);
+	//return (pixelDist >= cmy) ? 1 : 0;
 }
 
 float4 PostprocessShader(PixelInputType input) : SV_Target
 {
 	float2 pixelPos = input.uv / subdivisions;
-	float2 centerPos = GetCenterUV(pixelPos, channelAngles.x); // doubles as cyan UV
-	float2 centerPosM = GetCenterUV(pixelPos, channelAngles.y);
-	float2 centerPosY = GetCenterUV(pixelPos, channelAngles.z);
 
-	float4 CMY = GetBrightness(pixelPos, subdivisions, centerPos);
+    float4 CMY = GetBrightness(pixelPos, channelAngles.x);
 	float C = CMY.r;
-	float M = GetBrightness(pixelPos, subdivisions, centerPosM).g;
-	float Y = GetBrightness(pixelPos, subdivisions, centerPosY).b;
+    float M = GetBrightness(pixelPos, channelAngles.y).g;
+    float Y = GetBrightness(pixelPos, channelAngles.z).b;
 
 	float3 color = float3(C, M, Y);
 
