@@ -219,7 +219,7 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 
 	if (auto* hp = dynamic_cast<HalftonePass*>(m_passes[1].get()))
 	{
-		float offsets[3] = { 0, 0, 0 };
+		float offsets[3] = { 1.0f, 1.0f, 1.0f };
 		hp->SetShaderParameters(m_deviceContext, rParams.inkColor, m_screenWidth/rParams.halftoneDotSize, m_screenHeight/rParams.halftoneDotSize, false, offsets);
 	}
 

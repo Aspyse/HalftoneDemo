@@ -16,12 +16,13 @@ private:
 	{
 		XMFLOAT2 subdivisions;
 		int isMonotone;
+		float pad0;
 
 		XMFLOAT3 dotColor;
+		float pad1;
 
 		XMFLOAT3 channelOffsets;
-
-		float padding[3];
+		float pad2;
 	};
 
 public:
