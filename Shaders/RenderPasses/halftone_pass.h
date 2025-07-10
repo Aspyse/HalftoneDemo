@@ -28,6 +28,12 @@ private:
 public:
 	bool SetShaderParameters(ID3D11DeviceContext*, float*, UINT, UINT, bool, float*);
 
+protected:
+	const wchar_t* filename() const
+	{
+		return L"Shaders/halftone.ps";
+	}
+
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;
 };

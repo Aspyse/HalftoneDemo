@@ -29,6 +29,12 @@ private:
 public:
 	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMFLOAT3, XMFLOAT3, float*, float, float);
 
+protected:
+	const wchar_t* filename() const
+	{
+		return L"Shaders/base.ps";
+	}
+
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;
 };

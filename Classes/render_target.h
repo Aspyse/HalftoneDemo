@@ -12,9 +12,26 @@ class RenderTarget
 public:
     RenderTarget() = default;
 
-    bool SetTarget(ID3D11RenderTargetView* target)
+    void BindAsResource(ID3D11DeviceContext* deviceContext)
+    {
+        deviceContext->PSSetShaderResources(0, GetNumViews(), GetResource());
+    }
+
+    void ClearTarget(ID3D11DeviceContext* deviceContext, float* clearColor)
+    {
+        deviceContext->ClearRenderTargetView(GetTarget(), clearColor);
+        deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    }
+
+    void BindAsTarget(ID3D11DeviceContext* deviceContext)
+    {
+        deviceContext->OMSetRenderTargets(1, m_target.GetAddressOf(), m_dsv);
+    }
+
+    bool SetTarget(ID3D11RenderTargetView* target, ID3D11DepthStencilView* dsv = nullptr)
     {
         m_target = target;
+        m_dsv = dsv;
         return true;
     }
 
@@ -85,6 +102,11 @@ public:
         return m_target.Get();
     }
 
+    ID3D11DepthStencilView* GetDSV()
+    {
+        return m_dsv;
+    }
+
     ID3D11ShaderResourceView* const* GetResource()
     {
         return m_resourcePointers.data();
@@ -97,6 +119,7 @@ public:
 
 private:
     ComPtr<ID3D11RenderTargetView> m_target;
+    ID3D11DepthStencilView* m_dsv = nullptr;
     vector<ComPtr<ID3D11ShaderResourceView>> m_resources;
     vector<ID3D11ShaderResourceView*> m_resourcePointers;
 };

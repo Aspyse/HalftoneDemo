@@ -32,6 +32,12 @@ private:
 public:
 	bool SetShaderParameters(ID3D11DeviceContext*, float, float, XMFLOAT3, float*, float, float, float*, float, bool);
 
+protected:
+	const wchar_t* filename() const
+	{
+		return L"Shaders/crosshatch.ps";
+	}
+
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;
 };

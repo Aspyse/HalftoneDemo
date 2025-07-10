@@ -1,11 +1,18 @@
 #include "render_pass.h"
 
-bool RenderPass::Initialize(ID3D11Device* device, const wchar_t* pixelFilename)
+RenderPass::RenderPass()
 {
+	m_outputRT = std::make_shared<RenderTarget>();
+}
+
+bool RenderPass::Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
+{
+	m_outputRT->Initialize(device, textureWidth, textureHeight);
+	
 	wchar_t vsFilename[128];
 	wchar_t psFilename[128];
 
-	int error = wcscpy_s(psFilename, 128, pixelFilename);
+	int error = wcscpy_s(psFilename, 128, filename());
 	if (error != 0)
 		return false;
 
@@ -57,6 +64,7 @@ bool RenderPass::Initialize(ID3D11Device* device, const wchar_t* pixelFilename)
 	return true;
 }
 
+// IMMEDIATE TODO: refactor this part
 bool RenderPass::Render(ID3D11DeviceContext* deviceContext, float* clearColor)
 {
 	if (Begin) Begin();
@@ -64,30 +72,42 @@ bool RenderPass::Render(ID3D11DeviceContext* deviceContext, float* clearColor)
 	for (UINT i = 0; i < m_constantBuffers.size(); ++i)
 		deviceContext->PSSetConstantBuffers(i, 1, m_constantBuffers[i].GetAddressOf());
 
-	deviceContext->PSSetShaderResources(0, m_numResourceViews, m_shaderResource);
+	m_inputRT->BindAsResource(deviceContext);
 
-	deviceContext->ClearRenderTargetView(m_renderTarget, clearColor);
-	if (m_dsv)
-		deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	m_outputRT->ClearTarget(deviceContext, clearColor);
 
-	deviceContext->OMSetRenderTargets(m_numTargetViews, &m_renderTarget, m_dsv);
+	m_outputRT->BindAsTarget(deviceContext);
 
 	RenderFrame(deviceContext);
 
 	return true;
 }
 
-void RenderPass::AssignShaderResource(ID3D11ShaderResourceView* const* resource, UINT numViews)
+void RenderPass::WrapInput(ID3D11ShaderResourceView* const* resource, UINT numViews)
 {
-	m_shaderResource = resource;
-	m_numResourceViews = numViews;
+	m_inputRT = std::make_shared<RenderTarget>();
+	m_inputRT->SetResource(resource, numViews);
 }
 
-void RenderPass::AssignRenderTarget(ID3D11RenderTargetView* target, UINT numViews, ID3D11DepthStencilView* pDepthStencilView)
+void RenderPass::SetInput(std::shared_ptr<RenderTarget> input)
 {
-	m_renderTarget = target;
-	m_numTargetViews = numViews;
-	m_dsv = pDepthStencilView;
+	m_inputRT = input;
+}
+
+void RenderPass::WrapOutput(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+{
+	m_outputRT = std::make_shared<RenderTarget>();
+	m_outputRT->SetTarget(rtv, dsv);
+}
+
+void RenderPass::SetOutput(std::shared_ptr<RenderTarget> output)
+{
+	m_outputRT = output;
+}
+
+std::shared_ptr<RenderTarget> RenderPass::GetOutput()
+{
+	return m_outputRT;
 }
 
 bool RenderPass::RenderFrame(ID3D11DeviceContext* deviceContext)

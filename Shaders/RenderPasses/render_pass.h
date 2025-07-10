@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render_target.h"
 #include <fstream>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -13,22 +14,26 @@ using std::ofstream;
 class RenderPass
 {
 public:
+	RenderPass();
+
 	std::function<void()> Begin; // Lambda for processing before rendering, e.g. binding extra samplers
 
-	bool Initialize(ID3D11Device*, const wchar_t*);
+	bool Initialize(ID3D11Device*, UINT, UINT);
 
 	bool Render(ID3D11DeviceContext*, float*);
 
-	void AssignShaderResource(ID3D11ShaderResourceView* const*, UINT);
+	void WrapInput(ID3D11ShaderResourceView* const*, UINT);
+	void SetInput(std::shared_ptr<RenderTarget>);
 
-	void AssignRenderTarget(ID3D11RenderTargetView*, UINT, ID3D11DepthStencilView*);
+	void WrapOutput(ID3D11RenderTargetView*, ID3D11DepthStencilView*);
+	void SetOutput(std::shared_ptr<RenderTarget>);
+
+	std::shared_ptr<RenderTarget> GetOutput();
 
 private:
 	bool RenderFrame(ID3D11DeviceContext*);
 
 	virtual bool InitializeConstantBuffer(ID3D11Device* device) = 0;
-
-
 
 	static void OutputShaderErrorMessage(ID3D10Blob* errorMessage, WCHAR* shaderFilename)
 	{
@@ -50,10 +55,12 @@ private:
 		errorMessage = 0;
 	}
 
+protected:
+	virtual const wchar_t* filename() const = 0;
+
 private:
-	ID3D11RenderTargetView* m_renderTarget = nullptr;
-	ID3D11ShaderResourceView* const* m_shaderResource = nullptr;
-	ID3D11DepthStencilView* m_dsv = nullptr;
+	std::shared_ptr<RenderTarget> m_inputRT;
+	std::shared_ptr<RenderTarget> m_outputRT;
 
 	UINT m_numTargetViews = 0, m_numResourceViews = 0;
 

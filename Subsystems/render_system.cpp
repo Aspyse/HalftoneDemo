@@ -61,100 +61,11 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	if (FAILED(result))
 		return false;
 
-	// Custom samplers
-	ID3D11SamplerState* shadowSampler;
-	D3D11_SAMPLER_DESC shadowDesc;
-	ZeroMemory(&shadowDesc, sizeof(shadowDesc));
-	shadowDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	shadowDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	shadowDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	shadowDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	shadowDesc.MipLODBias = 0.0f;
-	shadowDesc.MaxAnisotropy = 1;
-	shadowDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	shadowDesc.BorderColor[0] = 1.0f;
-	shadowDesc.BorderColor[1] = 1.0f;
-	shadowDesc.BorderColor[2] = 1.0f;
-	shadowDesc.BorderColor[3] = 1.0f;
-	shadowDesc.MinLOD = 0;
-	shadowDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	result = m_device->CreateSamplerState(&shadowDesc, &shadowSampler);
-	if (FAILED(result))
-		return false;
-
-
-
-	/* RENDER TARGETS */
-	// Stored in vector for management (TODO)
-	auto lightingOut = std::make_unique<RenderTarget>();
-	lightingOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(lightingOut)); // target 0
-
-	/*
-	auto sobelOut = std::make_unique<RenderTarget>();
-	sobelOut->Initialize(m_device, m_screenWidth, m_screenHeight);
-	m_targets.push_back(std::move(sobelOut)); // target 1
-
-	auto blendIn = std::make_unique<RenderTarget>();
-	ID3D11ShaderResourceView* empty[2] = { nullptr, nullptr };
-	blendIn->SetResource(empty, 2);
-	m_targets.push_back(std::move(blendIn)); // target 2
-	*/
-
-
-	/* RENDER PASSES */
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
-	auto lightingPass = std::make_unique<LightingPass>();
-	lightingPass->Initialize(m_device, L"Shaders/base.ps");
-	lightingPass->Begin = [this, shadowSampler]()
-	{
-		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
-	};
-	m_passes.push_back(std::move(lightingPass)); // pass 0
-
-	auto halftonePass = std::make_unique<HalftonePass>();
-	halftonePass->Initialize(m_device, L"Shaders/halftone.ps");
-	m_passes.push_back(std::move(halftonePass));
-
-	/*
-	auto sobelPass = std::make_unique<SobelPass>();
-	sobelPass->Initialize(m_device, L"Shaders/sobel.ps");
-	m_passes.push_back(std::move(sobelPass)); // pass 1
-
-	auto blendPass = std::make_unique<BlendPass>();
-	blendPass->Initialize(m_device, L"Shaders/blend.ps");
-	m_passes.push_back(std::move(blendPass)); // pass 2
-	*/
-
-
-	AssignTargets();
-
-	return true;
-}
-
-bool RenderSystem::AssignTargets()
-{
-	m_passes[0]->AssignShaderResource(m_gBuffer, 4);
-	m_passes[0]->AssignRenderTarget(m_targets[0]->GetTarget(), 1, nullptr);
-
-	m_passes[1]->AssignShaderResource(m_targets[0]->GetResource(), m_targets[0]->GetNumViews());
-	m_passes[1]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
-
-	/*
-	m_passes[1]->AssignShaderResource(&m_gBuffer[2], 1);
-	m_passes[1]->AssignRenderTarget(m_targets[1]->GetTarget(), 1, nullptr);
-
-	ID3D11ShaderResourceView* blendResources[2] = {
-		m_targets[0]->GetResource()[0],
-		m_targets[1]->GetResource()[0]
-	};
-	m_targets[2]->SetResource(blendResources, 2);
-	m_passes[2]->AssignShaderResource(m_targets[2]->GetResource(), m_targets[2]->GetNumViews());
-	m_passes[2]->AssignRenderTarget(m_renderTargetView, 1, m_depthStencilView);
-	*/
+	m_material = std::make_unique<RenderGraph>(m_device, m_deviceContext, m_screenWidth, m_screenHeight);
+	m_material->DebugInit(m_gBuffer, m_renderTargetView, m_depthStencilView);
 
 	return true;
 }
@@ -194,10 +105,11 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 			m_geometryPass->Render(m_deviceContext, model->GetIndexCount(i));
 		}
 	}
-	ReleaseRenderTargets();
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 
 	// Fetch G-buffer
-	// TODO: try to make gbuffer not global
+	// TODO: refac gbuffer
 	m_gBuffer[0] = m_geometryPass->GetGBuffer(0);
 	m_gBuffer[1] = m_geometryPass->GetGBuffer(1);
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
@@ -205,37 +117,10 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	
 
 
-
-
 	/* LIGHTING PASS */
-	/* CONSTANT BUFFER PARAMETERS*/
-	XMFLOAT3 lightColor = XMFLOAT3(4.0f, 4.0f, 4.0f);
-	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirectionVec, viewMatrix);
-	XMFLOAT3 lightDirectionVS;
-	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
+	m_material->SetParameters(rParams, lightDirectionVec, viewMatrix, projectionMatrix, m_geometryPass->GetLightViewProj());
 
-	if (auto* lp = dynamic_cast<LightingPass*>(m_passes[0].get()))
-		lp->SetShaderParameters(m_deviceContext, projectionMatrix, viewMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVS, lightColor, rParams.clearColor, rParams.ambientStrength, rParams.celThreshold);
-
-	if (auto* hp = dynamic_cast<HalftonePass*>(m_passes[1].get()))
-	{
-		float offsets[3] = { 1.0f, 1.0f, 1.0f };
-		hp->SetShaderParameters(m_deviceContext, rParams.inkColor, m_screenWidth/rParams.halftoneDotSize, m_screenHeight/rParams.halftoneDotSize, false, offsets);
-	}
-
-	/*
-	if (auto* sp = dynamic_cast<SobelPass*>(m_passes[1].get()))
-		sp->SetShaderParameters(m_deviceContext, m_screenWidth, m_screenHeight, 1, rParams.edgeThreshold, rParams.inkColor, rParams.clearColor);
-	*/
-
-	/* FORWARD RENDER */
-	for (auto& pass : m_passes)
-	{
-		m_deviceContext->PSSetSamplers(0, 1, &m_sampler);
-		pass->Render(m_deviceContext, rParams.clearColor);
-		ReleaseRenderTargets();
-	}
-
+	m_material->Render(m_sampler, rParams);
 
 
 	// Render GUI
@@ -261,7 +146,7 @@ void RenderSystem::Resize(UINT width, UINT height)
 	CreateDepthBuffer();
 
 	/* REINITIALIZE + REASSIGN */
-	// TODO: IMPORTANT! AUTOMATE
+	// TODO: refac into render graph
 	for (auto& target : m_targets)
 	{
 		if (target->GetNumViews() == 1) // TODO: fix this nasty workaround
@@ -269,7 +154,7 @@ void RenderSystem::Resize(UINT width, UINT height)
 	}
 	m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
 
-	AssignTargets();
+	//AssignTargets();
 
 	ResetViewport(m_screenWidth, m_screenHeight);
 }
@@ -307,12 +192,6 @@ void RenderSystem::EndScene()
 	// Present
 	HRESULT hr = m_swapChain->Present(0, 0); // Without vsync
 	m_isSwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
-}
-
-void RenderSystem::ReleaseRenderTargets()
-{
-	ID3D11RenderTargetView* nullRTV = nullptr;
-	m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 }
 
 bool RenderSystem::InitializeDeviceD3D(HWND hWnd)

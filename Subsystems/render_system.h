@@ -6,6 +6,7 @@
 #include "model.h"
 #include "render_target.h"
 
+#include "render_graph.h"
 #include "geometry_pass.h"
 #include "render_pass.h"
 
@@ -35,7 +36,7 @@ public:
 	ID3D11DeviceContext* GetContext();
 
 private:
-	bool AssignTargets();
+	//bool AssignTargets();
 
 	void EndScene();
 
@@ -43,7 +44,7 @@ private:
 	void CleanupDeviceD3D();
 	bool CreateRenderTarget();
 	void CleanupRenderTarget();
-	void ReleaseRenderTargets();
+	//void ReleaseRenderTargets();
 
 	bool InitializeDepthStencilState();
 	bool InitializeRaster();
@@ -55,6 +56,8 @@ private:
 	void ResetViewport(float, float);
 
 private:
+	std::unique_ptr<RenderGraph> m_material;
+
 	ID3D11ShaderResourceView* m_gBuffer[4] = { nullptr, nullptr, nullptr, nullptr };
 	GeometryPass* m_geometryPass = nullptr;
 
