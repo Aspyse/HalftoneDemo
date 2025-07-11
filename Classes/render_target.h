@@ -14,7 +14,7 @@ public:
 
     void BindAsResource(ID3D11DeviceContext* deviceContext)
     {
-        deviceContext->PSSetShaderResources(0, GetNumViews(), GetResource());
+        deviceContext->PSSetShaderResources(0, m_numViews, m_shaderResource);
     }
 
     void ClearTarget(ID3D11DeviceContext* deviceContext, float* clearColor)
@@ -35,6 +35,7 @@ public:
         return true;
     }
 
+    /*
     bool SetResource(ID3D11ShaderResourceView* resource)
     {
         return SetResource(&resource, 1);
@@ -56,12 +57,21 @@ public:
 
         return true;
     }
+    */
+
+    bool SetResource(ID3D11ShaderResourceView* const* resource, UINT numViews)
+    {
+        m_shaderResource = resource;
+        m_numViews = numViews;
+
+        return true;
+    }
 
 	bool Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 	{
         m_target.Reset();
-        m_resources.clear();
-        m_resourcePointers.clear();
+        //m_resources.clear();
+        //m_resourcePointers.clear();
         
         D3D11_TEXTURE2D_DESC td;
         ZeroMemory(&td, sizeof(td));
@@ -85,13 +95,13 @@ public:
             return false;
 
         // SRV
-        ComPtr<ID3D11ShaderResourceView> tempResource;
-        result = device->CreateShaderResourceView(texture.Get(), nullptr, &tempResource);
-        if (FAILED(result))
+        //result = device->CreateShaderResourceView(texture.Get(), nullptr, &tempResource);
+        //result = device->CreateShaderResourceView(texture.Get(), nullptr, &m_shaderResource);
+        //if (FAILED(result))
             return false;
 
-        m_resources.push_back(tempResource);
-        m_resourcePointers.push_back(tempResource.Get());
+        //m_resources.push_back(tempResource);
+        //m_resourcePointers.push_back(tempResource.Get());
 
         return true;
 	}
@@ -107,19 +117,24 @@ public:
         return m_dsv;
     }
 
+    /*
     ID3D11ShaderResourceView* const* GetResource()
     {
         return m_resourcePointers.data();
     }
+    */
 
     UINT GetNumViews()
     {
-        return static_cast<UINT>(m_resourcePointers.size());
+        //return static_cast<UINT>(m_resourcePointers.size());
+        return m_numViews = 0;
     }
 
 private:
     ComPtr<ID3D11RenderTargetView> m_target;
     ID3D11DepthStencilView* m_dsv = nullptr;
-    vector<ComPtr<ID3D11ShaderResourceView>> m_resources;
-    vector<ID3D11ShaderResourceView*> m_resourcePointers;
+    //vector<ComPtr<ID3D11ShaderResourceView>> m_resources;
+    //vector<ID3D11ShaderResourceView*> m_resourcePointers;
+    ID3D11ShaderResourceView* const* m_shaderResource = nullptr;
+    UINT m_numViews = 0;
 };

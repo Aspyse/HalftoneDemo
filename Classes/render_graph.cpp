@@ -10,7 +10,7 @@ RenderGraph::RenderGraph(ID3D11Device* device, ID3D11DeviceContext* context, UIN
 	m_screenHeight = screenHeight;
 }
 
-void RenderGraph::DebugInit(ID3D11ShaderResourceView** gBuffer, ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+void RenderGraph::DebugInit(ID3D11ShaderResourceView* const* gBuffer, ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
 {
 	// Custom samplers
 	ID3D11SamplerState* shadowSampler;
@@ -59,7 +59,7 @@ void RenderGraph::DebugInit(ID3D11ShaderResourceView** gBuffer, ID3D11RenderTarg
 
 	m_passes[0]->WrapInput(gBuffer, 4);
 	m_passes[1]->SetInput(m_passes[0]->GetOutput());
-	m_passes[1]->WrapOutput(rtv, dsv);
+	m_passes[0]->WrapOutput(rtv, dsv);
 }
 
 void RenderGraph::SetParameters(RenderParameters& rParams, XMVECTOR lightDirectionVec, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewProj)

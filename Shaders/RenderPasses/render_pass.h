@@ -13,6 +13,34 @@ using std::ofstream;
 
 class RenderPass
 {
+	enum WidgetType
+	{
+		FLOAT,
+		FLOAT3,
+		COLOR,
+		INT,
+		ANGLE,
+		CHECKBOX,
+		RENDER_TARGET
+	};
+
+	struct IParameter
+	{
+		virtual ~IParameter() = default;
+		virtual const std::string& name() const = 0;
+		virtual WidgetType type() const = 0;
+	};
+	template<typename T>
+	struct ParameterControl : IParameter
+	{
+		std::string m_name;
+		WidgetType m_type;
+		T& m_field;
+
+		const std::string& name() const override { return m_name; }
+		WidgetType type() const override { return m_type; }
+	};
+
 public:
 	RenderPass();
 
@@ -59,6 +87,7 @@ protected:
 	virtual const wchar_t* filename() const = 0;
 
 private:
+	std::vector<std::unique_ptr<IParameter>> m_parameters;
 	std::shared_ptr<RenderTarget> m_inputRT;
 	std::shared_ptr<RenderTarget> m_outputRT;
 

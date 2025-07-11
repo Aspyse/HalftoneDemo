@@ -114,7 +114,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	m_gBuffer[1] = m_geometryPass->GetGBuffer(1);
 	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
 	m_gBuffer[3] = m_geometryPass->GetShadowMap();
-	
 
 
 	/* LIGHTING PASS */
