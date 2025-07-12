@@ -50,7 +50,6 @@ public:
 
 	bool Render(ID3D11DeviceContext*, float*);
 
-	void WrapInput(ID3D11ShaderResourceView* const*, UINT);
 	void SetInput(std::shared_ptr<RenderTarget>);
 
 	void WrapOutput(ID3D11RenderTargetView*, ID3D11DepthStencilView*);

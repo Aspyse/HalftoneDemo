@@ -4,6 +4,8 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
+#include "render_target.h"
+
 using namespace DirectX;
 
 class GeometryPass
@@ -48,7 +50,7 @@ public:
 	void Render(ID3D11DeviceContext*, int);
 	bool RenderShadow(ID3D11DeviceContext*, int, XMVECTOR);
 
-	ID3D11ShaderResourceView* GetGBuffer(UINT);
+	std::shared_ptr<RenderTarget> GetGBuffer();
 	ID3D11ShaderResourceView* GetShadowMap();
 	XMMATRIX GetLightViewProj() const;
 
@@ -60,6 +62,8 @@ private:
 	void OutputShaderErrorMessage(ID3D10Blob*, WCHAR*);
 
 private:
+	std::shared_ptr<RenderTarget> m_gBuffer;
+
 	ID3D11VertexShader* m_vertexShader = nullptr;
 	ID3D11PixelShader* m_pixelShader = nullptr;
 	ID3D11InputLayout *m_layout = nullptr, * m_shadowLayout = nullptr;

@@ -58,12 +58,13 @@ private:
 private:
 	std::unique_ptr<RenderGraph> m_material;
 
-	ID3D11ShaderResourceView* m_gBuffer[4] = { nullptr, nullptr, nullptr, nullptr };
+	//ID3D11ShaderResourceView* m_gBuffer[4] = { nullptr, nullptr, nullptr, nullptr };
+	std::shared_ptr<RenderTarget> m_gBuffer;
 	GeometryPass* m_geometryPass = nullptr;
 
 	vector<std::unique_ptr<ModelClass>> m_models;
-	vector<std::unique_ptr<RenderTarget>> m_targets;
-	vector<std::unique_ptr<RenderPass>> m_passes;
+	//vector<std::unique_ptr<RenderTarget>> m_targets;
+	//vector<std::unique_ptr<RenderPass>> m_passes;
 
 	bool m_isSwapChainOccluded = false;
 

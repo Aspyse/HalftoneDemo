@@ -83,12 +83,6 @@ bool RenderPass::Render(ID3D11DeviceContext* deviceContext, float* clearColor)
 	return true;
 }
 
-void RenderPass::WrapInput(ID3D11ShaderResourceView* const* resource, UINT numViews)
-{
-	m_inputRT = std::make_shared<RenderTarget>();
-	m_inputRT->SetResource(resource, numViews);
-}
-
 void RenderPass::SetInput(std::shared_ptr<RenderTarget> input)
 {
 	m_inputRT = input;

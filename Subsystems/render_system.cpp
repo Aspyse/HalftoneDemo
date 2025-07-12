@@ -108,14 +108,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	ID3D11RenderTargetView* nullRTV = nullptr;
 	m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 
-	// Fetch G-buffer
-	// TODO: refac gbuffer
-	m_gBuffer[0] = m_geometryPass->GetGBuffer(0);
-	m_gBuffer[1] = m_geometryPass->GetGBuffer(1);
-	m_gBuffer[2] = m_geometryPass->GetGBuffer(2);
-	m_gBuffer[3] = m_geometryPass->GetShadowMap();
-
-
 	/* LIGHTING PASS */
 	m_material->SetParameters(rParams, lightDirectionVec, viewMatrix, projectionMatrix, m_geometryPass->GetLightViewProj());
 
@@ -146,12 +138,9 @@ void RenderSystem::Resize(UINT width, UINT height)
 
 	/* REINITIALIZE + REASSIGN */
 	// TODO: refac into render graph
-	for (auto& target : m_targets)
-	{
-		if (target->GetNumViews() == 1) // TODO: fix this nasty workaround
-			target->Initialize(m_device, m_screenWidth, m_screenHeight);
-	}
 	m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
+	m_material->Resize(width, height, m_gBuffer, m_renderTargetView, m_depthStencilView);
+
 
 	//AssignTargets();
 

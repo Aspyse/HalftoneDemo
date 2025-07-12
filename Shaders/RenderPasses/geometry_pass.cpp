@@ -5,20 +5,9 @@ GeometryPass::GeometryPass() {}
 GeometryPass::GeometryPass(const GeometryPass&) {}
 GeometryPass::~GeometryPass() {}
 
-ID3D11ShaderResourceView* GeometryPass::GetGBuffer(UINT index)
+std::shared_ptr<RenderTarget> GeometryPass::GetGBuffer()
 {
-    // TODO: figure out if there's a better way
-    switch (index)
-    {
-    case 0:
-        return m_albedoSRV;
-    case 1:
-        return m_normalSRV;
-    case 2:
-        return m_depthSRV;
-    default:
-        return nullptr;
-    }
+    return m_gBuffer;
 }
 
 ID3D11ShaderResourceView* GeometryPass::GetShadowMap()
@@ -274,6 +263,10 @@ bool GeometryPass::InitializeGBuffer(ID3D11Device* device, UINT width, UINT heig
 
     depthTexture->Release();
     depthTexture = nullptr;
+
+    m_gBuffer->AddResource(m_albedoSRV);
+    m_gBuffer->AddResource(m_normalSRV);
+    m_gBuffer->AddResource(m_depthSRV);
 
     return true;
 }
