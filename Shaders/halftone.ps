@@ -48,27 +48,26 @@ float4 GetBrightness(float2 pixelPos, float rotation)
 
 	float4 baseColor = 1 - inputTexture.SampleLevel(samplerState, centerUV, 0);
 	
+    float2 cellFrac = frac(centerPos);
+    float2 neighborSign = (cellFrac > 0.5) ? 1 : -1;
+	
 	// Closest X neighbor
-    float offset = (frac(pixelPos.x) > 0.5) ? 1 : -1;
-    float2 xPixelPos = float2(pixelPos.x + offset, pixelPos.y);
-    float2 xCenterPos = GetCenterUV(xPixelPos, rotation);
+    float2 xOffset = float2(neighborSign.x, 0);
+    float2 xCenterPos = centerPos + xOffset;
     float2 xCenterUV = xCenterPos * subdivisions;
 	
     float2 xDelta = xCenterPos - pixelPos; // distance to neighbor center
-    float xPixelDist = length(xDelta);
-    xPixelDist = xPixelDist / 0.7071;
+    float xPixelDist = length(xDelta) / 0.7071;
 	
     float4 xBaseColor = 1 - inputTexture.SampleLevel(samplerState, xCenterUV, 0);
 	
 	// TODO: Closest Y neighbor
-    offset = (frac(pixelPos.y) > 0.5) ? 1 : -1;
-    float2 yPixelPos = float2(pixelPos.x, pixelPos.y + offset);
-    float2 yCenterPos = GetCenterUV(yPixelPos, rotation);
+    float2 yOffset = float2(0, neighborSign.y);
+    float2 yCenterPos = centerPos + yOffset;
     float2 yCenterUV = yCenterPos * subdivisions;
 	
     float2 yDelta = yCenterPos - pixelPos; // distance to neighbor center
-    float yPixelDist = length(yDelta);
-    yPixelDist = yPixelDist / 0.7071;
+    float yPixelDist = length(yDelta) / 0.7071;
 	
     float4 yBaseColor = 1 - inputTexture.SampleLevel(samplerState, yCenterUV, 0);
 	
@@ -76,8 +75,8 @@ float4 GetBrightness(float2 pixelPos, float rotation)
     float4 xCMY = smoothstep(xBaseColor - smoothness, xBaseColor + smoothness, xPixelDist);
     float4 yCMY = smoothstep(yBaseColor - smoothness, yBaseColor + smoothness, yPixelDist);
 	
-    float4 outCol = (cmy < xCMY) ? cmy : xCMY;
-	outCol = (outCol < yCMY) ? outCol : yCMY;
+    float4 outCol = min(cmy, xCMY);
+    outCol = min(outCol, yCMY);
     return outCol;
 	//return (pixelDist >= cmy) ? 1 : 0;
 }

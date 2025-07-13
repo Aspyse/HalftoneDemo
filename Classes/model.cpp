@@ -17,6 +17,10 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 	if (strcmp(extension, ".ply") == 0)
 	{
 		m_materials.push_back(std::make_unique<MaterialClass>());
+		m_materials[0]->SetUseTexture(0, false);
+		m_materials[0]->SetUseTexture(1, false);
+		m_materials[0]->SetUseTexture(2, false);
+
 		LoadPLY(vertices, filename);
 		CalculateNormals(vertices);
 		DummyUVs(vertices);

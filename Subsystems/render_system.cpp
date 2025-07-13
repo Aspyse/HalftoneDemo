@@ -108,7 +108,7 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
 	auto lightingPass = std::make_unique<LightingPass>();
-	lightingPass->Initialize(m_device, L"Shaders/base.ps");
+	lightingPass->Initialize(m_device, L"Shaders/flat.ps");
 	lightingPass->Begin = [this, shadowSampler]()
 	{
 		this->m_deviceContext->PSSetSamplers(1, 1, &shadowSampler);
