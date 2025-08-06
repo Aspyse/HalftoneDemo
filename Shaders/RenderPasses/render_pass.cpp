@@ -1,14 +1,7 @@
 #include "render_pass.h"
 
-RenderPass::RenderPass()
-{
-	m_outputRT = std::make_shared<RenderTarget>();
-}
-
 bool RenderPass::Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 {
-	m_outputRT->Initialize(device, textureWidth, textureHeight);
-	
 	wchar_t vsFilename[128];
 	wchar_t psFilename[128];
 
@@ -64,48 +57,15 @@ bool RenderPass::Initialize(ID3D11Device* device, UINT textureWidth, UINT textur
 	return true;
 }
 
+
 // IMMEDIATE TODO: refactor this part
-bool RenderPass::Render(ID3D11DeviceContext* deviceContext, float* clearColor)
+bool RenderPass::Render(ID3D11Device* device, ID3D11DeviceContext* deviceContext, float* clearColor)
 {
-	if (Begin) Begin();
+	Begin(device, deviceContext);
 
 	for (UINT i = 0; i < m_constantBuffers.size(); ++i)
 		deviceContext->PSSetConstantBuffers(i, 1, m_constantBuffers[i].GetAddressOf());
 
-	m_inputRT->BindAsResource(deviceContext);
-
-	m_outputRT->ClearTarget(deviceContext, clearColor);
-
-	m_outputRT->BindAsTarget(deviceContext);
-
-	RenderFrame(deviceContext);
-
-	return true;
-}
-
-void RenderPass::SetInput(std::shared_ptr<RenderTarget> input)
-{
-	m_inputRT = input;
-}
-
-void RenderPass::WrapOutput(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
-{
-	m_outputRT = std::make_shared<RenderTarget>();
-	m_outputRT->SetTarget(rtv, dsv);
-}
-
-void RenderPass::SetOutput(std::shared_ptr<RenderTarget> output)
-{
-	m_outputRT = output;
-}
-
-std::shared_ptr<RenderTarget> RenderPass::GetOutput()
-{
-	return m_outputRT;
-}
-
-bool RenderPass::RenderFrame(ID3D11DeviceContext* deviceContext)
-{
 	deviceContext->IASetInputLayout(nullptr);
 
 	deviceContext->VSSetShader(m_vertexShader, nullptr, 0);
@@ -114,4 +74,13 @@ bool RenderPass::RenderFrame(ID3D11DeviceContext* deviceContext)
 	deviceContext->Draw(3, 0);
 
 	return true;
+}
+
+std::vector<std::string> RenderPass::GetInputs() const
+{
+	return m_inputs;
+}
+std::vector<std::string> RenderPass::GetOutputs() const
+{
+	return outputs();
 }

@@ -8,8 +8,10 @@ GuiSystem::GuiSystem() {}
 GuiSystem::GuiSystem(const GuiSystem& other) {}
 GuiSystem::~GuiSystem() {}
 
-bool GuiSystem::Initialize(HWND hwnd)
+bool GuiSystem::Initialize(HWND hwnd, RenderSystem* renderSystem)
 {
+	m_renderSystem = renderSystem;
+	
 	// Create application window
 	ImGui_ImplWin32_EnableDpiAwareness();
 
@@ -45,47 +47,160 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 
 	// Show window
 	{
-		ImGui::Begin("Scene Controls");
+		ImGui::Begin("Editor Controls");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 
-		ImGui::DragFloat("Vertical FOV", &rParams.verticalFOV, 0.2f, 10, 90);
-		ImGui::DragFloat("Near Z", &rParams.nearZ, 0.002f, 0.001, 10);
-		ImGui::DragFloat("Far Z", &rParams.farZ, 0.2f, 10, 1000);
-		ImGui::Separator();
+		if (ImGui::BeginTabBar("Tabs"))
+		{
+			if (ImGui::BeginTabItem("Scene Controls"))
+			{
+				ImGui::DragFloat("Vertical FOV", &rParams.verticalFOV, 0.2f, 10, 90);
+				ImGui::DragFloat("Near Z", &rParams.nearZ, 0.002f, 0.001, 10);
+				ImGui::DragFloat("Far Z", &rParams.farZ, 0.2f, 10, 1000);
 
-		ImGui::ColorEdit3("Albedo Color", rParams.albedoColor);
-		ImGui::DragFloat("Roughness", &rParams.roughness, 0.002f, 0, 1);
-		ImGui::DragFloat("Cel Threshold", &rParams.celThreshold, 0.002f, -1, 1);
+				ImGui::DragFloat3("Light Direction", rParams.lightDirection, 0.004f);
+				ImGui::ColorEdit3("Clear Color", rParams.clearColor);
+				ImGui::DragFloat("Ambient Strength", &rParams.ambientStrength, 0.002f, 0, 1);
 
-		ImGui::Separator();
+				ImGui::EndTabItem();
+			}
+			
+			if (ImGui::BeginTabItem("Pass Controls"))
+			{
+				const auto& effect = m_renderSystem->m_effect;
+				std::vector<const char*> keys;
+				for (const auto& pair : effect->GetTargets())
+					keys.push_back(pair.first.data());
+				
+				auto params = m_renderSystem->m_outPass->GetParameters();
+				auto& pTarget = std::get<std::reference_wrapper<std::string>>(params[0].m_field).get();
+				int selected;
+				for (selected = 0; selected < keys.size(); ++selected)
+					if (keys[selected] == pTarget)
+						break;
 
-		ImGui::DragInt("Halftone Dot Size", &rParams.halftoneDotSize, 0.5f, 1, 50);
+				if (selected == keys.size())
+					selected = 0;
+				ImGui::Combo("Output Target", &selected, keys.data(), keys.size());
 
-		ImGui::Separator();
+				ImGui::Separator();
 
-		ImGui::DragFloat("Edge Threshold", &rParams.edgeThreshold, 0.002f, 0, 2);
-		ImGui::ColorEdit3("Ink Color", rParams.inkColor);
+				pTarget = keys[selected];
+				for (const auto& param : m_renderSystem->m_geometryPass->GetParameters())
+				{
+					switch (param.m_type)
+					{
+					case RenderPass::WidgetType::CHECKBOX:
+					{
+						auto& pBool = std::get<std::reference_wrapper<int>>(param.m_field).get();
+						bool b = (pBool != 0);
+						ImGui::Checkbox(param.m_name.data(), &b);
 
-		ImGui::Separator();
+						pBool = b ? 1 : 0;
+						break;
+					}
+					case RenderPass::WidgetType::FLOAT:
+					{
+						auto& pFloat = std::get<std::reference_wrapper<float>>(param.m_field).get();
+						ImGui::DragFloat(param.m_name.data(), &pFloat, 0.002f, 0, 1);
+						break;
+					}
+					case RenderPass::WidgetType::COLOR:
+					{
+						auto& pColor = std::get<std::reference_wrapper<XMFLOAT3>>(param.m_field).get();
+						float color[3] = {pColor.x, pColor.y, pColor.z};
+						ImGui::ColorEdit3(param.m_name.data(), color);
+						pColor = { color[0], color[1], color[2] };
+						break;
+					}
+					}
+				}
+				ImGui::Separator();
+				
 
-		ImGui::DragFloat("Crosshatch Threshold A", &rParams.thresholdA, 0.002f, -1, 1);
-		ImGui::DragFloat("Crosshatch Threshold B", &rParams.thresholdB, 0.002f, -1, 1);
-		ImGui::DragFloat("Crosshatch Thickness", &rParams.thicknessMul, 0.002f, 0, 10);
-		ImGui::DragFloat("Crosshatch Density", &rParams.densityMul, 0.002f, 0, 3);
-		ImGui::SliderAngle("Crosshatch Angle", &rParams.hatchAngle, 0.0f, 360.0f);
-		ImGui::Checkbox("Feather Crosshatch?", &rParams.isFeather);
+				for (const auto& p : effect->GetPasses())
+				{
+					for (const auto& param : p->GetParameters())
+					{
+						switch (param.m_type)
+						{
+						case RenderPass::WidgetType::RENDER_TARGET:
+						{
+							auto& pTarget = std::get<std::reference_wrapper<std::string>>(param.m_field).get();
+							int selected;
+							for (selected = 0; selected < keys.size(); ++selected)
+								if (keys[selected] == pTarget)
+									break;
 
-		ImGui::Separator();
+							if (selected == keys.size())
+								selected = 0;
 
-		ImGui::DragFloat3("Light Direction", rParams.lightDirection, 0.004f);
-		ImGui::ColorEdit3("Clear Color", rParams.clearColor);
-		ImGui::DragFloat("Ambient Strength", &rParams.ambientStrength, 0.002f, 0, 1);
+							ImGui::Combo(param.m_name.data(), &selected, keys.data(), keys.size());
+							pTarget = keys[selected];
 
-		ImGui::Separator();
+							break;
+						}
+						case RenderPass::WidgetType::CHECKBOX:
+						{
+							auto& pBool = std::get<std::reference_wrapper<int>>(param.m_field).get();
+							bool b = (pBool != 0);
+							ImGui::Checkbox(param.m_name.data(), &b);
 
-		
-		//if (ImGui::InputText("Filename", filename, IM_ARRAYSIZE(filename), ImGuiInputTextFlags_EnterReturnsTrue) || ImGui::Button("Load Model"))
-			// reset model
+							pBool = b ? 1 : 0;
+							break;
+						}
+						case RenderPass::WidgetType::INT:
+						{
+							auto& pInt = std::get<std::reference_wrapper<int>>(param.m_field).get();
+							ImGui::DragInt(param.m_name.data(), &pInt, 1, 0, 8);
+							break;
+						}
+						case RenderPass::WidgetType::FLOAT:
+						{
+							auto& pFloat = std::get<std::reference_wrapper<float>>(param.m_field).get();
+							ImGui::DragFloat(param.m_name.data(), &pFloat, 0.002f, 0, 1);
+							break;
+						}
+						case RenderPass::WidgetType::FLOAT3:
+						{
+							auto& pFloat3 = std::get<std::reference_wrapper<XMFLOAT3>>(param.m_field).get();
+							float float3[3] = { pFloat3.x, pFloat3.y, pFloat3.z };
+							ImGui::DragFloat3(param.m_name.data(), float3, 0.004f);
+							pFloat3 = { float3[0], float3[1], float3[2] };
+							break;
+						}
+						case RenderPass::WidgetType::COLOR:
+						{
+							auto& pColor = std::get<std::reference_wrapper<XMFLOAT3>>(param.m_field).get();
+							float color[3] = { pColor.x, pColor.y, pColor.z };
+							ImGui::ColorEdit3(param.m_name.data(), color);
+							pColor = { color[0], color[1], color[2] };
+							break;
+						}
+						}
+					}
+
+					ImGui::Separator();
+				}
+
+				// Temp creators
+				if (ImGui::Button("Create Lighting Pass"))
+					effect->AddPass(std::make_unique<LightingPass>());
+
+				if (ImGui::Button("Create Canny Pass"))
+					effect->AddPass(std::make_unique<CannyPass>());
+
+				if (ImGui::Button("Create Blend Pass"))
+					effect->AddPass(std::make_unique<BlendPass>());
+
+
+				ImGui::EndTabItem();
+			}
+			
+			ImGui::EndTabBar();
+		}
+
+
 
 		ImGui::End();
 	}

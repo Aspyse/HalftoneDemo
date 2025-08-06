@@ -14,15 +14,15 @@ class SobelPass : public RenderPass
 private:
 	struct SobelBufferType
 	{
-		int isScharr;
 		XMFLOAT2 offset;
 		float threshold;
-
-		XMFLOAT3 inkColor;
 		float pad0;
 
-		XMFLOAT3 clearColor;
+		XMFLOAT3 inkColor;
 		float pad1;
+
+		XMFLOAT3 clearColor;
+		float pad2;
 	};
 
 public:

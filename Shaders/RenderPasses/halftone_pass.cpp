@@ -1,25 +1,19 @@
 #include "halftone_pass.h"
+#include <functional>
 
 bool HalftonePass::InitializeConstantBuffer(ID3D11Device* device)
 {
-	ComPtr<ID3D11Buffer> halftoneBuffer;
-	
-	D3D11_BUFFER_DESC hbd;
-	ZeroMemory(&hbd, sizeof(hbd));
-	hbd.Usage = D3D11_USAGE_DYNAMIC;
-	hbd.ByteWidth = sizeof(HalftoneBufferType);
-	hbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	hbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	hbd.MiscFlags = 0;
-	hbd.StructureByteStride = 0;
-
-	HRESULT result = device->CreateBuffer(&hbd, nullptr, halftoneBuffer.GetAddressOf());
-	if (FAILED(result))
-		return false;
-
-	m_constantBuffers.push_back(halftoneBuffer);
+	AddCB<HalftoneBufferType>(device);
 
 	return true;
+}
+
+std::vector<RenderPass::ParameterControl> HalftonePass::GetParameters()
+{
+	return {
+		{ "Input", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[0]) },
+		{ "Is Monotone?", RenderPass::WidgetType::CHECKBOX, std::ref(m_halftoneBuffer.isMonotone) }
+	};
 }
 
 bool HalftonePass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float* inkColor, UINT width, UINT height, bool isMonotone, float* channelOffsets)

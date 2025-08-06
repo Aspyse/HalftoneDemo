@@ -2,7 +2,8 @@
 # project specific logic here.
 #
 cmake_minimum_required(VERSION 3.14)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DNOMINMAX)
 
 # Enable Hot Reload for MSVC compilers if supported.
@@ -55,7 +56,7 @@ add_executable(
   "include/imgui/backends/imgui_impl_dx11.cpp"
   "include/imgui/backends/imgui_impl_win32.cpp"
   "include/miniply/miniply.cpp"
-   "Shaders/RenderPasses/render_pass.cpp" "Classes/material.h" "Classes/material.cpp" "Classes/render_graph.cpp")
+   "Shaders/RenderPasses/render_pass.cpp" "Classes/material.h" "Classes/material.cpp" "Classes/effect.cpp"  "Shaders/RenderPasses/flat_pass.h" "Shaders/RenderPasses/out_pass.h" "Shaders/RenderPasses/canny_pass.h" "Shaders/RenderPasses/canny_pass.cpp")
 
 target_include_directories(
   HalftoneDemo

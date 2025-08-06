@@ -1,6 +1,5 @@
 #include "lighting_pass.h"
 #include "halftone_pass.h"
-#include "sobel_pass.h"
 #include "blend_pass.h"
 #include "crosshatch_pass.h"
 
@@ -11,7 +10,6 @@
 RenderSystem::RenderSystem() {};
 RenderSystem::RenderSystem(const RenderSystem&) {};
 RenderSystem::~RenderSystem() {};
-using namespace std;
 
 bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 {
@@ -64,8 +62,18 @@ bool RenderSystem::Initialize(HWND hwnd, WNDCLASSEXW wc)
 	m_geometryPass = new GeometryPass;
 	m_geometryPass->Initialize(m_device, m_screenWidth, m_screenHeight);
 
-	m_material = std::make_unique<RenderGraph>(m_device, m_deviceContext, m_screenWidth, m_screenHeight);
-	m_material->DebugInit(m_gBuffer, m_renderTargetView, m_depthStencilView);
+	m_gBuffer = {
+		m_geometryPass->GetGBuffer(0),
+		m_geometryPass->GetGBuffer(1),
+		m_geometryPass->GetGBuffer(2),
+		m_geometryPass->GetShadowMap()
+	};
+
+	m_outPass = new OutPass;
+	m_outPass->Initialize(m_device, m_screenWidth, m_screenHeight);
+
+	m_effect = std::make_unique<Effect>(m_device, m_deviceContext);
+	m_effect->Initialize(m_gBuffer, m_screenWidth, m_screenHeight);
 
 	return true;
 }
@@ -83,7 +91,6 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 	/* GEOMETRY PASS */
 	XMFLOAT3 lightDirectionF = XMFLOAT3(rParams.lightDirection[0], rParams.lightDirection[1], rParams.lightDirection[2]);
 	XMVECTOR lightDirectionVec = XMVector3Normalize(XMLoadFloat3(&lightDirectionF));
-	XMFLOAT3 albedoColor = XMFLOAT3(rParams.albedoColor[0], rParams.albedoColor[1], rParams.albedoColor[2]);
 
 	m_geometryPass->ClearGBuffer(m_deviceContext, rParams.clearColor);
 	for (const auto& model : models)
@@ -101,18 +108,28 @@ bool RenderSystem::Render(RenderParameters& rParams, XMMATRIX viewMatrix, XMMATR
 			// Reset after viewport is set to shadowmap size
 			ResetViewport(m_screenWidth, m_screenHeight);
 
-			m_geometryPass->SetShaderParameters(m_deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoColor, rParams.roughness, model->GetUseTexture(i, 0), model->GetUseTexture(i, 1), model->GetUseTexture(i, 2));
+			m_geometryPass->Update(m_deviceContext, viewMatrix, projectionMatrix, model->GetUseTexture(i, 0), model->GetUseTexture(i, 1), model->GetUseTexture(i, 2));
 			m_geometryPass->Render(m_deviceContext, model->GetIndexCount(i));
 		}
 	}
 	ID3D11RenderTargetView* nullRTV = nullptr;
 	m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 
-	/* LIGHTING PASS */
-	m_material->SetParameters(rParams, lightDirectionVec, viewMatrix, projectionMatrix, m_geometryPass->GetLightViewProj());
+	XMFLOAT3 clearColor = XMFLOAT3(rParams.clearColor[0]*rParams.ambientStrength, rParams.clearColor[1]* rParams.ambientStrength, rParams.clearColor[2]* rParams.ambientStrength);
+	m_effect->Update(viewMatrix, projectionMatrix, m_geometryPass->GetLightViewProj(), lightDirectionVec, clearColor);
+	m_effect->Render(m_sampler);
 
-	m_material->Render(m_sampler, rParams);
+	auto outTarget = m_outPass->GetInputs()[0];
+	auto it = m_effect->GetTargets().find(outTarget);
+	if (it != m_effect->GetTargets().end())
+	{
+		m_deviceContext->PSSetShaderResources(0, 1, m_effect->GetTargets().at(outTarget)->GetResourceView());
+		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr);
+		m_outPass->Render(m_device, m_deviceContext, rParams.clearColor);
 
+		ID3D11RenderTargetView* nullRTV = nullptr;
+		m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
+	}
 
 	// Render GUI
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
@@ -136,14 +153,16 @@ void RenderSystem::Resize(UINT width, UINT height)
 	CreateRenderTarget();
 	CreateDepthBuffer();
 
-	/* REINITIALIZE + REASSIGN */
-	// TODO: refac into render graph
 	m_geometryPass->InitializeGBuffer(m_device, m_screenWidth, m_screenHeight);
-	m_material->Resize(width, height, m_gBuffer, m_renderTargetView, m_depthStencilView);
-
-
-	//AssignTargets();
-
+	m_gBuffer = {
+		m_geometryPass->GetGBuffer(0),
+		m_geometryPass->GetGBuffer(1),
+		m_geometryPass->GetGBuffer(2),
+		m_geometryPass->GetShadowMap()
+	};
+	//m_effect->Resize(width, height);
+	m_effect->Initialize(m_gBuffer, width, height);
+	
 	ResetViewport(m_screenWidth, m_screenHeight);
 }
 
@@ -207,7 +226,7 @@ bool RenderSystem::InitializeDeviceD3D(HWND hWnd)
 
 	sd.Flags = 0;
 
-	UINT createDeviceFlags = 0;
+	UINT createDeviceFlags = D3D11_CREATE_DEVICE_DEBUG;
 	
 	D3D_FEATURE_LEVEL featureLevel;
 	const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
@@ -242,6 +261,7 @@ void RenderSystem::CleanupDeviceD3D()
 bool RenderSystem::CreateRenderTarget()
 {
 	ID3D11Texture2D* pBackBuffer;
+	
 	HRESULT result = m_swapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
 	if (FAILED(result))
 		return false;
