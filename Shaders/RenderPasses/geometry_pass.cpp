@@ -5,23 +5,23 @@ GeometryPass::GeometryPass() {}
 GeometryPass::GeometryPass(const GeometryPass&) {}
 GeometryPass::~GeometryPass() {}
 
-ID3D11ShaderResourceView* GeometryPass::GetGBuffer(UINT index)
+ComPtr<ID3D11ShaderResourceView> GeometryPass::GetGBuffer(int index)
 {
-    // TODO: figure out if there's a better way
     switch (index)
     {
     case 0:
         return m_albedoSRV;
+        break;
     case 1:
         return m_normalSRV;
+        break;
     case 2:
         return m_depthSRV;
-    default:
-        return nullptr;
+        break;
     }
 }
 
-ID3D11ShaderResourceView* GeometryPass::GetShadowMap()
+ComPtr<ID3D11ShaderResourceView> GeometryPass::GetShadowMap()
 {
     return m_shadowSRV;
 }
@@ -347,45 +347,36 @@ void GeometryPass::Shutdown()
     }
 }
 
-bool GeometryPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 albedoColor, float roughness, bool useAlbedo, bool useNormal, bool useRoughness)
+std::vector<RenderPass::ParameterControl> GeometryPass::GetParameters()
 {
-    //roughness *= roughness;
-    
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    HRESULT result = deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    if (FAILED(result))
-        return false;
+    return {
+        //{ "Use Albedo Texture?", RenderPass::WidgetType::CHECKBOX, std::ref(m_materialData.useAlbedoTexture) },
+        { "Albedo Color", RenderPass::WidgetType::COLOR, std::ref(m_materialData.albedoColor) },
+        //{ "Use Roughness Texture?", RenderPass::WidgetType::CHECKBOX, std::ref(m_materialData.useRoughnessTexture) },
+        { "Roughness", RenderPass::WidgetType::FLOAT, std::ref(m_materialData.roughness) },
+        //{ "Use Normal Texture?", RenderPass::WidgetType::CHECKBOX, std::ref(m_materialData.useNormalTexture) }
+    };
+}
 
-    MaterialBufferType* dataPtr2 = (MaterialBufferType*)mappedResource.pData;
-    dataPtr2->roughness = roughness;
-    dataPtr2->useAlbedoTexture = useAlbedo;
-    dataPtr2->useNormalTexture = useNormal;
-    dataPtr2->useRoughnessTexture = useRoughness;
-    dataPtr2->albedoColor = albedoColor;
-    dataPtr2->viewMatrix = XMMatrixTranspose(viewMatrix);
+void GeometryPass::Update(ID3D11DeviceContext* deviceContext, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, bool useAlbedo, bool useNormal, bool useRoughness)
+{
+    m_materialData.viewMatrix = XMMatrixTranspose(viewMatrix);
+    m_materialData.useAlbedoTexture = useAlbedo;
+    m_materialData.useNormalTexture = useNormal;
+    m_materialData.useRoughnessTexture = useRoughness;
 
+    m_cameraData.worldMatrix= XMMatrixIdentity();
+    m_cameraData.viewMatrix = XMMatrixTranspose(viewMatrix);
+    m_cameraData.projectionMatrix = XMMatrixTranspose(projectionMatrix);
+
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+    deviceContext->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    std::memcpy(mapped.pData, &m_materialData, sizeof(m_materialData));
     deviceContext->Unmap(m_materialBuffer, 0);
 
-    UINT bufferNumber = 0;
-    deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_materialBuffer);
-    
-    result = deviceContext->Map(m_cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    if (FAILED(result))
-        return false;
-
-    CameraBufferType* dataPtr = (CameraBufferType*)mappedResource.pData;
-
-    dataPtr->worldMatrix = XMMatrixIdentity();
-    dataPtr->viewMatrix = XMMatrixTranspose(viewMatrix);
-    dataPtr->projectionMatrix = XMMatrixTranspose(projectionMatrix);
-
+    deviceContext->Map(m_cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    std::memcpy(mapped.pData, &m_cameraData, sizeof(m_cameraData));
     deviceContext->Unmap(m_cameraBuffer, 0);
-
-    bufferNumber = 0;
-
-    deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_cameraBuffer);
-
-    return true;
 }
 
 void GeometryPass::ClearGBuffer(ID3D11DeviceContext* deviceContext, float* clearColor)
@@ -394,10 +385,8 @@ void GeometryPass::ClearGBuffer(ID3D11DeviceContext* deviceContext, float* clear
     deviceContext->ClearDepthStencilView(m_shadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
     
     // Clear the render target views
-    //float clearColor[4] = { 0, 0, 0, 0 };
-    deviceContext->ClearRenderTargetView(m_albedoRTV, clearColor);
-    deviceContext->ClearRenderTargetView(m_normalRTV, clearColor);
-
+    deviceContext->ClearRenderTargetView(m_albedoRTV.Get(), clearColor);
+    deviceContext->ClearRenderTargetView(m_normalRTV.Get(), clearColor);
 
     deviceContext->ClearDepthStencilView(m_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
@@ -405,9 +394,12 @@ void GeometryPass::ClearGBuffer(ID3D11DeviceContext* deviceContext, float* clear
 void GeometryPass::Render(ID3D11DeviceContext* deviceContext, int indexCount)
 {
     // Set the render targets (albedo and normal) along with the depth stencil view
-    ID3D11RenderTargetView* renderTargets[2] = { m_albedoRTV, m_normalRTV };
+    ID3D11RenderTargetView* renderTargets[2] = { m_albedoRTV.Get(), m_normalRTV.Get()};
 
     deviceContext->OMSetRenderTargets(2, renderTargets, m_dsv);
+
+    deviceContext->VSSetConstantBuffers(0, 1, &m_cameraBuffer);
+    deviceContext->PSSetConstantBuffers(0, 1, &m_materialBuffer);
 
     deviceContext->IASetInputLayout(m_layout);
 

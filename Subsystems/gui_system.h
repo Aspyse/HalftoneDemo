@@ -13,7 +13,7 @@ public:
 	GuiSystem(const GuiSystem&);
 	~GuiSystem();
 
-	bool Initialize(HWND);
+	bool Initialize(HWND, RenderSystem*);
 	void Shutdown();
 	bool Frame(RenderParameters&);
 

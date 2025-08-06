@@ -1,0 +1,46 @@
+Texture2D inputTexture : register(t0); // typically depth but normal.b is cool too
+SamplerState samplerState : register(s0);
+
+cbuffer DilateBuffer : register(b0)
+{
+    float3 inkColor;
+    float threshold;
+    
+    float2 offset;
+    float2 pad;
+};
+
+struct PixelInputType
+{
+    float2 uv : TEXCOORD0;
+    float4 position : SV_POSITION;
+};
+
+float Fetch(float2 uv)
+{
+    return inputTexture.Sample(samplerState, uv).r;
+}
+
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+    //float maxm = Fetch(input.uv + float2(-offset.x, -offset.y));
+    //maxm = max(maxm, Fetch(input.uv + float2(0, -offset.y)));
+    
+    //maxm = max(maxm, Fetch(input.uv + float2(+offset.x, -offset.y)));
+
+    //maxm = max(maxm, Fetch(input.uv + float2(-offset.x, 0)));
+    //maxm = max(maxm, Fetch(input.uv));
+    
+    //maxm = max(maxm, Fetch(input.uv + float2(+offset.x, 0)));
+    
+    //maxm = max(maxm, Fetch(input.uv + float2(-offset.x, +offset.y)));
+    //maxm = max(maxm, Fetch(input.uv + float2(0, +offset.y)));
+   // maxm = max(maxm, Fetch(input.uv + float2(+offset.x, +offset.y)));
+   
+    float maxm = Fetch(input.uv);
+    maxm = (maxm > threshold) ? 1 : 0;
+    
+    float3 color = maxm*inkColor;
+
+    return float4(color, maxm);
+}

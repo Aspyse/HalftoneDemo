@@ -11,40 +11,26 @@ class RenderTarget
 {
 public:
     RenderTarget() = default;
-
-    bool SetTarget(ID3D11RenderTargetView* target)
+    RenderTarget(ComPtr<ID3D11ShaderResourceView> srv) :
+        m_resourceView(srv)
     {
-        m_target = target;
-        return true;
+        ComPtr<ID3D11Resource> res;
+        m_resourceView->GetResource(&res);
+
+        res.As(&m_texture);
     }
 
-    bool SetResource(ID3D11ShaderResourceView* resource)
+    void ClearTarget(ID3D11DeviceContext* deviceContext, float* clearColor)
     {
-        return SetResource(&resource, 1);
-    }
-    bool SetResource(ID3D11ShaderResourceView* const* resources, UINT numViews)
-    {
-        m_resources.clear();
-        m_resourcePointers.clear();
-
-        for (UINT i = 0; i < numViews; ++i)
-        {
-            if (resources[i])
-                m_resources.emplace_back(resources[i]);
-            else
-                m_resources.push_back(nullptr);
-            
-            m_resourcePointers.push_back(m_resources.back().Get());
-        }
-
-        return true;
+        deviceContext->ClearRenderTargetView(m_target.Get(), clearColor);
+        if (m_dsv)
+            deviceContext->ClearDepthStencilView(m_dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
     }
 
 	bool Initialize(ID3D11Device* device, UINT textureWidth, UINT textureHeight)
 	{
         m_target.Reset();
-        m_resources.clear();
-        m_resourcePointers.clear();
+        m_resourceView.Reset();
         
         D3D11_TEXTURE2D_DESC td;
         ZeroMemory(&td, sizeof(td));
@@ -57,46 +43,43 @@ public:
         td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
         td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        ComPtr<ID3D11Texture2D> texture;
-        HRESULT result = device->CreateTexture2D(&td, nullptr, texture.GetAddressOf());
+        //ComPtr<ID3D11Texture2D> texture;
+        HRESULT result = device->CreateTexture2D(&td, nullptr, m_texture.GetAddressOf());
         if (FAILED(result))
             return false;
 
         // RTV
-        result = device->CreateRenderTargetView(texture.Get(), nullptr, m_target.GetAddressOf());
+        result = device->CreateRenderTargetView(m_texture.Get(), nullptr, m_target.GetAddressOf());
         if (FAILED(result))
             return false;
 
         // SRV
-        ComPtr<ID3D11ShaderResourceView> tempResource;
-        result = device->CreateShaderResourceView(texture.Get(), nullptr, &tempResource);
+        result = device->CreateShaderResourceView(m_texture.Get(), nullptr, m_resourceView.GetAddressOf());
         if (FAILED(result))
             return false;
-
-        m_resources.push_back(tempResource);
-        m_resourcePointers.push_back(tempResource.Get());
 
         return true;
 	}
 
     // TODO: consider getting pointer-to-pointer
-    ID3D11RenderTargetView* GetTarget()
+    ID3D11RenderTargetView* const* GetTarget()
     {
-        return m_target.Get();
+        return m_target.GetAddressOf();
     }
 
-    ID3D11ShaderResourceView* const* GetResource()
+    ID3D11Texture2D* GetResource()
     {
-        return m_resourcePointers.data();
+        return m_texture.Get();
     }
 
-    UINT GetNumViews()
+    ID3D11ShaderResourceView* const* GetResourceView()
     {
-        return static_cast<UINT>(m_resourcePointers.size());
+        return m_resourceView.GetAddressOf();
     }
 
 private:
+    ComPtr<ID3D11Texture2D> m_texture;
     ComPtr<ID3D11RenderTargetView> m_target;
-    vector<ComPtr<ID3D11ShaderResourceView>> m_resources;
-    vector<ID3D11ShaderResourceView*> m_resourcePointers;
+    ComPtr<ID3D11DepthStencilView> m_dsv;
+    ComPtr<ID3D11ShaderResourceView> m_resourceView;
 };

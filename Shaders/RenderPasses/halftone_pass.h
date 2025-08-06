@@ -26,8 +26,25 @@ private:
 	};
 
 public:
+	std::vector<ParameterControl> GetParameters() override;
 	bool SetShaderParameters(ID3D11DeviceContext*, float*, UINT, UINT, bool, float*);
+
+protected:
+	const std::vector<std::string> outputs() const
+	{
+		return {
+			"0"
+		};
+	}
+
+	const wchar_t* filename() const
+	{
+		return L"Shaders/halftone.ps";
+	}
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;
+
+private:
+	HalftoneBufferType m_halftoneBuffer;
 };

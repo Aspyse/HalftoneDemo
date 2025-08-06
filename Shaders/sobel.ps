@@ -1,27 +1,16 @@
 Texture2D inputTexture : register(t0); // typically depth but normal.b is cool too
 SamplerState samplerState : register(s0);
 
-// Sobel kernels
-row_major static const float3x3 sobelX = {
-   { -1,  0, +1 },
-   { -2,  0, +2 },
-   { -1,  0, +1 }
-};
-
-row_major static const float3x3 sobelY = {
-   { +1, +2, +1 },
-   {  0,  0,  0 },
-   { -1, -2, -1 }
-};
-
 // Scharr kernels
-row_major static const float3x3 scharrX = {
+row_major static const float3x3 kx =
+{
    { -3,  0, +3 },
    { -10, 0, +10 },
    { -3,  0, +3 }
 };
 
-row_major static const float3x3 scharrY = {
+row_major static const float3x3 ky =
+{
    { +3, +10, +3 },
    {  0,   0,  0 },
    { -3, -10, -3 }
@@ -29,15 +18,9 @@ row_major static const float3x3 scharrY = {
 
 cbuffer SobelBuffer : register(b0)
 {
-	bool isScharr;
     float2 offset; // (1 / subdivisions)
-    float threshold; // 0 = don't use
-
-    float3 inkColor;
-    bool isDepth; // for compensating non-linearity
-
-    float3 clearColor;
-	float pad1;
+    int isMono;
+    float pad0;
 };
 
 struct PixelInputType
@@ -46,40 +29,46 @@ struct PixelInputType
 	float4 position : SV_POSITION;
 };
 
-float Fetch(float2 uv)
+float Fetch(float2 uv, int channel)
 {
-    float4 depth = inputTexture.Sample(samplerState, uv);
-    return isDepth ? depth.r : (depth.r + depth.g + depth.b)/3;
+    float3 tex = inputTexture.Sample(samplerState, uv);
+    return (isMono || channel == 0) ? tex.r : (channel == 1) ? tex.g : tex.b;
 }
 
-float4 PostprocessShader(PixelInputType input) : SV_Target
+float2 Convolve(float2 uv, int channel)
 {
-    float3 row0 = float3(Fetch(input.uv+float2(-offset.x,-offset.y)),
-                         Fetch(input.uv+float2(    0,-offset.y)),
-                         Fetch(input.uv+float2(+offset.x,-offset.y)));
-    float3 row1 = float3(Fetch(input.uv+float2(-offset.x,    0)),
-                         Fetch(input.uv            ),
-                         Fetch(input.uv+float2(+offset.x,    0)));
-    float3 row2 = float3(Fetch(input.uv+float2(-offset.x,+offset.y)),
-                         Fetch(input.uv+float2(    0,+offset.y)),
-                         Fetch(input.uv+float2(+offset.x,+offset.y)));
+    float3 row0 = float3(Fetch(uv + float2(-offset.x, -offset.y), channel),
+                         Fetch(uv + float2(0, -offset.y), channel) ,
+                         Fetch(uv + float2(+offset.x, -offset.y), channel)
+    );
+    float3 row1 = float3(Fetch(uv + float2(-offset.x, 0), channel),
+                         Fetch(uv, channel),
+                         Fetch(uv + float2(+offset.x, 0), channel)
+    );
+    float3 row2 = float3(Fetch(uv + float2(-offset.x, +offset.y), channel),
+                         Fetch(uv + float2(0, +offset.y), channel),
+                         Fetch(uv + float2(+offset.x, +offset.y), channel)
+    );
 
-    // Select kernels
-    float3x3 kx = isScharr ? scharrX : sobelX;
-    float3x3 ky = isScharr ? scharrY : sobelY;
 
     // Multiply rows by matrix columns
     float gx = dot(kx[0], row0) + dot(kx[1], row1) + dot(kx[2], row2);
     float gy = dot(ky[0], row0) + dot(ky[1], row1) + dot(ky[2], row2);
+    return float2(gx / 16, gy / 16);    // range [-1, 1]
+}
 
-    float edge = sqrt(gx*gx + gy*gy);
-    edge /= 5.656854f;
-
-    // TODO: Non-maximum suppression
-    edge = (threshold > 0) ? step(threshold, edge) : edge;
-
-    float3 color = (edge * inkColor) + ((1-edge) * clearColor);
-
-    //return float4(inputTexture.Sample(samplerState, input.uv).rgb, 1);
-    return float4(color, edge);
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+    float2 gr = Convolve(input.uv, 0);
+    float2 gg = Convolve(input.uv, 1);
+    float2 gb = Convolve(input.uv, 2);
+    
+    //float gx = length(float3(gr.x, gg.x, gb.x));
+    //float gy = length(float3(gr.y, gg.y, gb.y));
+    float gx = (gr.x + gg.x + gb.x) / 3.0f;
+    float gy = (gr.y + gg.y + gb.y) / 3.0f;
+    
+    
+    float grad = sqrt(gx*gx + gy*gy);
+    return float4(gx / 2 + 0.5f, gy / 2 + 0.5f, grad, 1);
 }

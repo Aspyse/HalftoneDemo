@@ -6,7 +6,10 @@
 #include "model.h"
 #include "render_target.h"
 
+#include "effect.h"
 #include "geometry_pass.h"
+#include "canny_pass.h" // temp
+#include "out_pass.h"
 #include "render_pass.h"
 
 #include <d3d11.h>
@@ -20,6 +23,8 @@ using std::vector;
 
 class RenderSystem
 {
+	friend class GuiSystem;
+
 public:
 	RenderSystem();
 	RenderSystem(const RenderSystem&);
@@ -35,15 +40,12 @@ public:
 	ID3D11DeviceContext* GetContext();
 
 private:
-	bool AssignTargets();
-
 	void EndScene();
 
 	bool InitializeDeviceD3D(HWND);
 	void CleanupDeviceD3D();
 	bool CreateRenderTarget();
 	void CleanupRenderTarget();
-	void ReleaseRenderTargets();
 
 	bool InitializeDepthStencilState();
 	bool InitializeRaster();
@@ -55,12 +57,13 @@ private:
 	void ResetViewport(float, float);
 
 private:
-	ID3D11ShaderResourceView* m_gBuffer[4] = { nullptr, nullptr, nullptr, nullptr };
+	std::unique_ptr<Effect> m_effect;
+
+	std::vector<ComPtr<ID3D11ShaderResourceView>> m_gBuffer;
 	GeometryPass* m_geometryPass = nullptr;
+	OutPass* m_outPass = nullptr;
 
 	vector<std::unique_ptr<ModelClass>> m_models;
-	vector<std::unique_ptr<RenderTarget>> m_targets;
-	vector<std::unique_ptr<RenderPass>> m_passes;
 
 	bool m_isSwapChainOccluded = false;
 

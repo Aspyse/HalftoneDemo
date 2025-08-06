@@ -2,73 +2,73 @@
 
 bool LightingPass::InitializeConstantBuffer(ID3D11Device* device)
 {
-	ComPtr<ID3D11Buffer> matrixBuffer, lightBuffer;
-	
-	D3D11_BUFFER_DESC mbd;
-	ZeroMemory(&mbd, sizeof(mbd));
-	mbd.Usage = D3D11_USAGE_DYNAMIC;
-	mbd.ByteWidth = sizeof(MatrixBufferType);
-	mbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	mbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	mbd.MiscFlags = 0;
-	mbd.StructureByteStride = 0;
-
-	HRESULT result = device->CreateBuffer(&mbd, nullptr, matrixBuffer.GetAddressOf());
-	if (FAILED(result))
-		return false;
-
-	D3D11_BUFFER_DESC lbd;
-	ZeroMemory(&lbd, sizeof(lbd));
-	lbd.Usage = D3D11_USAGE_DYNAMIC;
-	lbd.ByteWidth = sizeof(LightBufferType);
-	lbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	lbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	lbd.MiscFlags = 0;
-	lbd.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&lbd, nullptr, lightBuffer.GetAddressOf());
-	if (FAILED(result))
-		return false;
-
-	m_constantBuffers.push_back(matrixBuffer);
-	m_constantBuffers.push_back(lightBuffer);
+	AddCB<MatrixBufferType>(device);
+	AddCB<LightBufferType>(device);
 
 	return true;
 }
 
-bool LightingPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX projectionMatrix, XMMATRIX viewMatrix, XMMATRIX lightViewProj, XMFLOAT3 lightDirectionVS, XMFLOAT3 lightColor, float* ambientColor, float ambientStrength, float celThreshold)
+void LightingPass::Begin(ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
+	ID3D11SamplerState* shadowSampler;
+	D3D11_SAMPLER_DESC shadowDesc;
+	ZeroMemory(&shadowDesc, sizeof(shadowDesc));
+	shadowDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	shadowDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowDesc.MipLODBias = 0.0f;
+	shadowDesc.MaxAnisotropy = 1;
+	shadowDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	shadowDesc.BorderColor[0] = 1.0f;
+	shadowDesc.BorderColor[1] = 1.0f;
+	shadowDesc.BorderColor[2] = 1.0f;
+	shadowDesc.BorderColor[3] = 1.0f;
+	shadowDesc.MinLOD = 0;
+	shadowDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	HRESULT result = device->CreateSamplerState(&shadowDesc, &shadowSampler);
+	if (FAILED(result))
+		return;
+
+	deviceContext->PSSetSamplers(1, 1, &shadowSampler);
+}
+
+std::vector<RenderPass::ParameterControl> LightingPass::GetParameters()
+{
+	return {
+		{ "Albedo", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[0]) },
+		{ "Normal + Roughness", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[1]) },
+		{ "Depth", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[2]) },
+		{ "Shadow Map", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[3]) },
+		//{ "Cel Threshold", RenderPass::WidgetType::FLOAT, std::ref(m_lightBuffer.celThreshold) }
+		{ "Light Color", RenderPass::WidgetType::FLOAT3, std::ref(m_lightBuffer.lightColor) },
+		//{ "Ambient Color", RenderPass::WidgetType::COLOR, std::ref(m_lightBuffer.ambientColor) },
+	};
+}
+
+void LightingPass::Update(ID3D11DeviceContext* deviceContext, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 clearColor, UINT width, UINT height)
+{
+	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirection, viewMatrix);
+	XMFLOAT3 lightDirectionVS;
+	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
+
 	XMMATRIX invProj = XMMatrixInverse(nullptr, projectionMatrix);
 	XMMATRIX invView = XMMatrixInverse(nullptr, viewMatrix);
+	
+	m_matrixBuffer.invProj = XMMatrixTranspose(invProj);
+	m_matrixBuffer.invView = XMMatrixTranspose(invView);
 
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT result = deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
+	m_lightBuffer.lightViewProj = XMMatrixTranspose(lightViewProj);
+	m_lightBuffer.lightDirectionVS = lightDirectionVS;
+	m_lightBuffer.ambientColor = clearColor;
 
-	MatrixBufferType* dataPtr = (MatrixBufferType*)mappedResource.pData;
-
-	dataPtr->invProj = XMMatrixTranspose(invProj);
-	dataPtr->invView = XMMatrixTranspose(invView);
-
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	std::memcpy(mapped.pData, &m_matrixBuffer, sizeof(m_matrixBuffer));
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
 
-	XMFLOAT3 ambientLight = XMFLOAT3(ambientColor[0] * ambientStrength, ambientColor[1] * ambientStrength, ambientColor[2] * ambientStrength);
-
-
-	result = deviceContext->Map(m_constantBuffers[1].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	LightBufferType* dataPtr2 = (LightBufferType*)mappedResource.pData;
-
-	dataPtr2->lightViewProj = XMMatrixTranspose(lightViewProj);
-	dataPtr2->lightDirectionVS = lightDirectionVS;
-	dataPtr2->celThreshold = celThreshold;
-	dataPtr2->lightColor = lightColor;
-	dataPtr2->ambientColor = ambientLight;
-
+	deviceContext->Map(m_constantBuffers[1].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	std::memcpy(mapped.pData, &m_lightBuffer, sizeof(m_lightBuffer));
 	deviceContext->Unmap(m_constantBuffers[1].Get(), 0);
-
-	return true;
 }

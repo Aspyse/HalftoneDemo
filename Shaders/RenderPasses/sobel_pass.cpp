@@ -36,7 +36,6 @@ bool SobelPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, UINT wid
 
 	SobelBufferType* dataPtr = (SobelBufferType*)mappedResource.pData;
 
-	dataPtr->isScharr = isScharr;
 	dataPtr->offset = offset;
 	dataPtr->threshold = threshold;
 	dataPtr->inkColor = inkColorX;

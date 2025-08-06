@@ -23,7 +23,8 @@ bool Engine::Initialize()
 	SetWindowLongPtr(m_hwnd, GWLP_USERDATA, (LONG_PTR)m_inputSystem);
 
 	m_guiSystem = new GuiSystem;
-	m_guiSystem->Initialize(m_hwnd);
+	m_renderSystem = new RenderSystem;
+	m_guiSystem->Initialize(m_hwnd, m_renderSystem);
 
 	// TODO: sync init values with gui
 	m_camera = new CameraClass;
@@ -33,7 +34,6 @@ bool Engine::Initialize()
 	m_camera->SetPosition(0.0f, 1.0f, -1.0f);
 	m_camera->SetRotation(0.0f, 0.0f, 0.0f);
 
-	m_renderSystem = new RenderSystem;
 	m_renderSystem->Initialize(m_hwnd, m_wc);
 
 	// FOR TESTING: create model

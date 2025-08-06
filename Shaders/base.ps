@@ -64,7 +64,7 @@ float4 PostprocessShader(PixelInputType input) : SV_TARGET
 	float3 H = normalize(V + L);
 
 	// DEBUG
-	//return float4(albedo, 1.0);
+	//return float4(albedo.rgb, 1.0);
 	//return float4(viewPos.rgb, 1);
 	//return float4(shadowMap.SampleLevel(samplerState, input.uv, 0).rrr,1);
 

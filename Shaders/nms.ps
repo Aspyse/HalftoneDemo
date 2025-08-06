@@ -1,0 +1,51 @@
+Texture2D inputTexture : register(t0);
+SamplerState samplerState : register(s0);
+
+static const float PI = 3.14159265359;
+static const float HALF_PI = PI * 0.5;
+static const float QUARTER_PI = PI * 0.25;
+static const float EIGHTH_PI = PI * 0.125;
+
+static const int2 offs[4] =
+{
+    int2(1, 0), // 0 degrees
+    int2(1, -1), // 45 degrees
+    int2(0, -1), // 90 degrees
+    int2(-1, -1) // 135 degrees
+};
+
+cbuffer NMSBuffer : register(b0)
+{
+    float2 offset;
+    float2 pad;
+};
+
+struct PixelInputType
+{
+    float2 uv : TEXCOORD0;
+    float4 position : SV_POSITION;
+};
+
+float4 PostprocessShader(PixelInputType input) : SV_Target
+{
+    float3 g = inputTexture.Sample(samplerState, input.uv);
+    
+    // Calculate gradient direction
+    float theta = atan2(g.y*2 - 1, g.x*2 - 1);
+    
+    // Get center magnitude
+    float M = g.b;
+    
+    float phi = (theta < 0.0) ? (theta + PI) : theta;
+    int sector = int(floor((phi + EIGHTH_PI) / QUARTER_PI)) & 3;
+    
+    // Get neighbors using pre-sampled data
+    float2 o = offs[sector]*offset;
+    float m0 = inputTexture.Sample(samplerState, input.uv + o).b;
+    float m1 = inputTexture.Sample(samplerState, input.uv - o).b;
+    
+    // Non-maximum suppression
+    float keep = (M > m0 && M > m1) ? M : 0.0;
+
+    return float4(keep.rrr, 1);
+}
