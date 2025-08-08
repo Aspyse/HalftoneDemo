@@ -26,7 +26,8 @@ private:
 		float pad2;
 
 		LightBufferType() :
-			lightColor(4, 4, 4)
+			lightColor{ 4, 4, 4 },
+			celThreshold(0.5)
 		{ }
 	};
 
@@ -34,6 +35,9 @@ public:
 	LightingPass()
 	{
 		m_inputs.resize(4);
+		m_outputs = {
+			"lighting_out"
+		};
 	}
 
 	void Begin(ID3D11Device*, ID3D11DeviceContext*) override;
@@ -45,16 +49,10 @@ protected:
 	{
 		return L"Shaders/base.ps";
 	}
-	const std::vector<std::string> outputs() const override
-	{
-		return {
-			"lighting_out"
-		};
-	}
-
-private:
-	bool InitializeConstantBuffer(ID3D11Device*) override;
 
 	MatrixBufferType m_matrixBuffer;
 	LightBufferType m_lightBuffer;
+
+private:
+	bool InitializeConstantBuffer(ID3D11Device*) override;
 };

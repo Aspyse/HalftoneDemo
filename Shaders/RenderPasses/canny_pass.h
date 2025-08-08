@@ -38,7 +38,8 @@ private:
 	struct NMSBufferType
 	{
 		XMFLOAT2 offset;
-		float pad[2];
+		int isNMS;
+		float pad;
 	};
 
 	struct DilateBufferType
@@ -59,6 +60,9 @@ public:
 	CannyPass()
 	{
 		m_inputs.resize(1);
+		m_outputs = {
+			"canny_out"
+		};
 	}
 
 	bool Initialize(ID3D11Device*, UINT, UINT) override;
@@ -69,12 +73,6 @@ private:
 	const wchar_t* filename() const override
 	{
 		return L"";
-	}
-	const std::vector<std::string> outputs() const override
-	{
-		return {
-			"canny_out"
-		};
 	}
 
 	std::unique_ptr<RenderTarget> m_pingTarget, m_pongTarget;

@@ -3,7 +3,7 @@ SamplerState samplerState : register(s0);
 
 cbuffer BlurBuffer : register(b0)
 {
-    int isDepth;
+    int isDepth; // not working
     float proj43;
     float proj33;
     int kernelRadius;
@@ -24,6 +24,8 @@ float4 Sample(float2 uv)
 {
     if (isDepth == 1)
     {
+        return inputTexture.Sample(samplerState, uv);
+        
         float z = inputTexture.Sample(samplerState, uv).r;
         z = (z * (proj33 - 1.0)) / (proj33 - z);
         return float4(z.rrr, 1);

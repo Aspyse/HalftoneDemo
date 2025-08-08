@@ -17,7 +17,8 @@ static const int2 offs[4] =
 cbuffer NMSBuffer : register(b0)
 {
     float2 offset;
-    float2 pad;
+    int isNMS;
+    float pad;
 };
 
 struct PixelInputType
@@ -30,11 +31,14 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
 {
     float3 g = inputTexture.Sample(samplerState, input.uv);
     
-    // Calculate gradient direction
-    float theta = atan2(g.y*2 - 1, g.x*2 - 1);
-    
     // Get center magnitude
     float M = g.b;
+    
+    if (isNMS != 1)
+        return float4(M.rrr, 1);
+        
+    // Calculate gradient direction
+    float theta = atan2(g.y * 2 - 1, g.x * 2 - 1);
     
     float phi = (theta < 0.0) ? (theta + PI) : theta;
     int sector = int(floor((phi + EIGHTH_PI) / QUARTER_PI)) & 3;
@@ -45,7 +49,7 @@ float4 PostprocessShader(PixelInputType input) : SV_Target
     float m1 = inputTexture.Sample(samplerState, input.uv - o).b;
     
     // Non-maximum suppression
-    float keep = (M > m0 && M > m1) ? M : 0.0;
+    float keep = (M >= m0 && M >= m1) ? M : 0.0;
 
     return float4(keep.rrr, 1);
 }

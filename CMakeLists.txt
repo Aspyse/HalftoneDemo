@@ -44,7 +44,6 @@ add_executable(
   "Shaders/RenderPasses/geometry_pass.cpp"
   "Shaders/RenderPasses/halftone_pass.cpp"
   "Shaders/RenderPasses/lighting_pass.cpp"
-  "Shaders/RenderPasses/sobel_pass.cpp"
   "Subsystems/gui_system.cpp"
   "Subsystems/input_system.cpp"
   "Subsystems/render_system.cpp"

@@ -53,7 +53,6 @@ public:
 	virtual void Update(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, UINT, UINT) = 0;
 
 	std::vector<std::string> GetInputs() const;
-	std::vector<std::string> GetOutputs() const;
 
 	static void OutputShaderErrorMessage(ID3D10Blob* errorMessage, WCHAR* shaderFilename)
 	{
@@ -91,7 +90,7 @@ protected:
 		bd.MiscFlags = 0;
 		bd.StructureByteStride = 0;
 
-		device->CreateBuffer(&bd, nullptr, tempBuffer.GetAddressOf());
+		HRESULT result = device->CreateBuffer(&bd, nullptr, tempBuffer.GetAddressOf());
 
 		m_constantBuffers.push_back(tempBuffer);
 	}
@@ -99,7 +98,11 @@ protected:
 	virtual void Begin(ID3D11Device*, ID3D11DeviceContext*) { } // Optional pre-setup, e.g. bind extra samplers
 	virtual bool InitializeConstantBuffer(ID3D11Device* device) = 0;
 	virtual const wchar_t* filename() const = 0;
-	virtual const std::vector<std::string> outputs() const = 0;
+	std::vector<std::string>& outputs()
+	{
+		return m_outputs;
+	}
+	std::vector<std::string> m_outputs;
 
 
 protected:

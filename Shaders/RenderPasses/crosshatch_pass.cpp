@@ -2,50 +2,36 @@
 
 bool CrosshatchPass::InitializeConstantBuffer(ID3D11Device* device)
 {
-	ComPtr<ID3D11Buffer> crosshatchBuffer;
-
-	D3D11_BUFFER_DESC cbd;
-	ZeroMemory(&cbd, sizeof(cbd));
-	cbd.Usage = D3D11_USAGE_DYNAMIC;
-	cbd.ByteWidth = sizeof(CrosshatchBufferType);
-	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	cbd.MiscFlags = 0;
-	cbd.StructureByteStride = 0;
-
-	HRESULT result = device->CreateBuffer(&cbd, nullptr, crosshatchBuffer.GetAddressOf());
-	if (FAILED(result))
-		return false;
-
-	m_constantBuffers.push_back(crosshatchBuffer);
+	AddCB<CrosshatchBufferType>(device);
 
 	return true;
 }
 
-bool CrosshatchPass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float thicknessMul, float topoFreqMul, XMFLOAT3 lightDirectionVS, float* inkColor, float thresholdA, float thresholdB, float* clearColor, float hatchAngle, bool isFeather)
+std::vector<RenderPass::ParameterControl> CrosshatchPass::GetParameters()
 {
-	XMFLOAT3 inkColorX = XMFLOAT3(inkColor[0], inkColor[1], inkColor[2]);
-	XMFLOAT3 clearColorX = XMFLOAT3(clearColor[0], clearColor[1], clearColor[2]);
+	return {
+		{ "Normal Texture", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[0]) },
+		{ "Thickness Multiplier", RenderPass::WidgetType::FLOAT, std::ref(m_crosshatchBuffer.thicknessMul) },
+		{ "Frequency Multiplier", RenderPass::WidgetType::FLOAT, std::ref(m_crosshatchBuffer.topoFreqMul) },
+		{ "Threshold A", RenderPass::WidgetType::FLOAT, std::ref(m_crosshatchBuffer.thresholdA) },
+		{ "Threshold B", RenderPass::WidgetType::FLOAT, std::ref(m_crosshatchBuffer.thresholdB) },
+		{ "Stroke Color", RenderPass::WidgetType::COLOR, std::ref(m_crosshatchBuffer.inkColor) },
+		{ "Hatch Angle", RenderPass::WidgetType::ANGLE, std::ref(m_crosshatchBuffer.hatchAngle) },
+		{ "Is Feather", RenderPass::WidgetType::CHECKBOX, std::ref(m_crosshatchBuffer.isFeather) }
+	};
+}
 
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT result = deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
+void CrosshatchPass::Update(ID3D11DeviceContext* deviceContext, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 clearColor, UINT width, UINT height)
+{
+	XMVECTOR lightDirectionVecVS = XMVector3TransformNormal(lightDirection, viewMatrix);
+	XMFLOAT3 lightDirectionVS;
+	XMStoreFloat3(&lightDirectionVS, lightDirectionVecVS);
 
-	CrosshatchBufferType* dataPtr = (CrosshatchBufferType*)mappedResource.pData;
+	m_crosshatchBuffer.lightDirectionVS = lightDirectionVS;
+	m_crosshatchBuffer.clearColor = clearColor;
 
-	dataPtr->thicknessMul = thicknessMul;
-	dataPtr->topoFreqMul = topoFreqMul;
-	dataPtr->thresholdA = thresholdA;
-	dataPtr->thresholdB = thresholdB;
-
-	dataPtr->lightDirectionVS = lightDirectionVS;
-	dataPtr->inkColor = inkColorX;
-	dataPtr->clearColor = clearColorX;
-	dataPtr->hatchAngle = hatchAngle;
-	dataPtr->isFeather = isFeather;
-
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	std::memcpy(mapped.pData, &m_crosshatchBuffer, sizeof(m_crosshatchBuffer));
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
-
-	return true;
 }

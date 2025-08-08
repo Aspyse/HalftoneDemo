@@ -14,7 +14,14 @@ public:
 			{ "Shadow Map", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[3]) },
 			{ "Cel Threshold", RenderPass::WidgetType::FLOAT, std::ref(m_lightBuffer.celThreshold) },
 			{ "Light Color", RenderPass::WidgetType::COLOR, std::ref(m_lightBuffer.lightColor) },
-			//{ "Ambient Color", RenderPass::WidgetType::COLOR, std::ref(m_lightBuffer.ambientColor) },
+		};
+	}
+
+	FlatPass()
+	{
+		m_inputs.resize(4);
+		m_outputs = {
+			"cel_out"
 		};
 	}
 protected:

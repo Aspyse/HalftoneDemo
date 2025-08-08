@@ -4,7 +4,7 @@ SamplerState samplerState : register(s0);
 cbuffer HalftoneBuffer : register(b0)
 {
 	float2 subdivisions;
-	bool isMonotone;
+	int isMonotone;
     float pad0;
 	
 	float3 dotColor;

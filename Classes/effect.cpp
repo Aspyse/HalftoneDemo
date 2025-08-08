@@ -1,4 +1,5 @@
 #include "effect.h"
+#include <string>
 
 using namespace DirectX;
 
@@ -42,10 +43,20 @@ const vector<std::unique_ptr<RenderPass>>& Effect::GetPasses() const
 
 void Effect::AddPass(std::unique_ptr<RenderPass> renderPass)
 {
-	for (auto o : renderPass->outputs())
+	for (auto& o : renderPass->outputs())
 	{
-		m_targets[o] = std::make_unique<RenderTarget>();
-		m_targets[o]->Initialize(m_device, m_screenWidth, m_screenHeight);
+		std::string name = o;
+		int ctr = 2;
+		while (m_targets.contains(name))
+		{
+			name = o + "_" + std::to_string(ctr);
+			ctr++;
+		}
+		
+		m_targets[name] = std::make_unique<RenderTarget>();
+		m_targets[name]->Initialize(m_device, m_screenWidth, m_screenHeight);
+
+		o = name;
 	}
 	
 	renderPass->Initialize(m_device, m_screenWidth, m_screenHeight);
@@ -106,7 +117,7 @@ void Effect::Render(ID3D11SamplerState* sampler)
 			}
 		}
 
-		for (auto out : pass->GetOutputs())
+		for (auto out : pass->outputs())
 		{
 			m_targets[out]->ClearTarget(m_deviceContext, clearColor);
 			m_deviceContext->OMSetRenderTargets(1, m_targets[out]->GetTarget(), nullptr);

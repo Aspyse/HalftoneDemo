@@ -23,9 +23,5 @@ private:
 	{
 		return L"Shaders/passthrough.ps";
 	}
-	const std::vector<std::string> outputs() const
-	{
-		return {};
-	}
 	bool InitializeConstantBuffer(ID3D11Device*) override { return true; };
 };

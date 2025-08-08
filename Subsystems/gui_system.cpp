@@ -117,9 +117,11 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 				}
 				ImGui::Separator();
 				
-
-				for (const auto& p : effect->GetPasses())
+				const auto& basses = effect->GetPasses();
+				for (int k = 0; k < basses.size(); ++k)
 				{
+					ImGui::PushID(k);
+					const auto& p = basses[k];
 					for (const auto& param : p->GetParameters())
 					{
 						switch (param.m_type)
@@ -149,16 +151,22 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 							pBool = b ? 1 : 0;
 							break;
 						}
+						case RenderPass::WidgetType::ANGLE:
+						{
+							auto& pFloat = std::get<std::reference_wrapper<float>>(param.m_field).get();
+							ImGui::SliderAngle(param.m_name.data(), &pFloat, 0, 360);
+							break;
+						}
 						case RenderPass::WidgetType::INT:
 						{
 							auto& pInt = std::get<std::reference_wrapper<int>>(param.m_field).get();
-							ImGui::DragInt(param.m_name.data(), &pInt, 1, 0, 8);
+							ImGui::DragInt(param.m_name.data(), &pInt, 1, 0, 20);
 							break;
 						}
 						case RenderPass::WidgetType::FLOAT:
 						{
 							auto& pFloat = std::get<std::reference_wrapper<float>>(param.m_field).get();
-							ImGui::DragFloat(param.m_name.data(), &pFloat, 0.002f, 0, 1);
+							ImGui::DragFloat(param.m_name.data(), &pFloat, 0.002f, -1, 2);
 							break;
 						}
 						case RenderPass::WidgetType::FLOAT3:
@@ -181,17 +189,27 @@ bool GuiSystem::Frame(RenderParameters& rParams)
 					}
 
 					ImGui::Separator();
+					ImGui::PopID();
 				}
 
 				// Temp creators
 				if (ImGui::Button("Create Lighting Pass"))
 					effect->AddPass(std::make_unique<LightingPass>());
 
+				if (ImGui::Button("Create Cel Pass"))
+					effect->AddPass(std::make_unique<FlatPass>());
+
 				if (ImGui::Button("Create Canny Pass"))
 					effect->AddPass(std::make_unique<CannyPass>());
 
 				if (ImGui::Button("Create Blend Pass"))
 					effect->AddPass(std::make_unique<BlendPass>());
+
+				if (ImGui::Button("Create Crosshatch Pass"))
+					effect->AddPass(std::make_unique<CrosshatchPass>());
+
+				if (ImGui::Button("Create Halftone Pass"))
+					effect->AddPass(std::make_unique<HalftonePass>());
 
 
 				ImGui::EndTabItem();

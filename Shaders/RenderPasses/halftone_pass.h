@@ -16,27 +16,34 @@ private:
 	{
 		XMFLOAT2 subdivisions;
 		int isMonotone;
-		float pad0;
+		int dotSize;
 
 		XMFLOAT3 dotColor;
 		float pad1;
 
 		XMFLOAT3 channelOffsets;
 		float pad2;
+
+		HalftoneBufferType() :
+			channelOffsets{ 0.26f, -0.26f, 0.0f },
+			dotColor{ 1, 1, 1 },
+			dotSize(6)
+		{ }
 	};
 
 public:
-	std::vector<ParameterControl> GetParameters() override;
-	bool SetShaderParameters(ID3D11DeviceContext*, float*, UINT, UINT, bool, float*);
-
-protected:
-	const std::vector<std::string> outputs() const
+	HalftonePass()
 	{
-		return {
-			"0"
+		m_inputs.resize(1);
+		m_outputs = {
+			"halftone_out"
 		};
 	}
 
+	std::vector<ParameterControl> GetParameters() override;
+	void Update(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, UINT, UINT) override;
+
+protected:
 	const wchar_t* filename() const
 	{
 		return L"Shaders/halftone.ps";

@@ -5,7 +5,6 @@
 #include "render_pass.h"
 #include "lighting_pass.h"
 #include "halftone_pass.h"
-#include "sobel_pass.h"
 #include "blend_pass.h"
 #include "crosshatch_pass.h"
 

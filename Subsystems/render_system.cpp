@@ -1,7 +1,6 @@
 #include "lighting_pass.h"
 #include "halftone_pass.h"
 #include "blend_pass.h"
-#include "crosshatch_pass.h"
 
 #include "render_system.h"
 #include "imgui_impl_dx11.h"

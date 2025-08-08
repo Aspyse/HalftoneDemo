@@ -80,7 +80,3 @@ std::vector<std::string> RenderPass::GetInputs() const
 {
 	return m_inputs;
 }
-std::vector<std::string> RenderPass::GetOutputs() const
-{
-	return outputs();
-}

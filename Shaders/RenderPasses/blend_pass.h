@@ -22,6 +22,7 @@ public:
 	BlendPass()
 	{
 		m_inputs.resize(2);
+		m_outputs = { "blend_out" };
 	}
 
 	void Update(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, UINT, UINT) override {};
@@ -29,10 +30,6 @@ private:
 	const wchar_t* filename() const
 	{
 		return L"Shaders/blend.ps";
-	}
-	const std::vector<std::string> outputs() const
-	{
-		return { "blend_out" };
 	}
 	bool InitializeConstantBuffer(ID3D11Device*) override { return true; };
 };

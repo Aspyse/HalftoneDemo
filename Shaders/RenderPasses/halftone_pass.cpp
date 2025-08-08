@@ -12,30 +12,22 @@ std::vector<RenderPass::ParameterControl> HalftonePass::GetParameters()
 {
 	return {
 		{ "Input", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[0]) },
-		{ "Is Monotone?", RenderPass::WidgetType::CHECKBOX, std::ref(m_halftoneBuffer.isMonotone) }
+		{ "Is Monotone?", RenderPass::WidgetType::CHECKBOX, std::ref(m_halftoneBuffer.isMonotone) },
+		{ "Dot Size", RenderPass::WidgetType::INT, std::ref(m_halftoneBuffer.dotSize) },
+		{ "Dot Color", RenderPass::WidgetType::COLOR, std::ref(m_halftoneBuffer.dotColor) },
+		{ "Channel Angle Offsets", RenderPass::WidgetType::FLOAT3, std::ref(m_halftoneBuffer.channelOffsets) }
 	};
 }
 
-bool HalftonePass::SetShaderParameters(ID3D11DeviceContext* deviceContext, float* inkColor, UINT width, UINT height, bool isMonotone, float* channelOffsets)
+void HalftonePass::Update(ID3D11DeviceContext* deviceContext, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewProj, XMVECTOR lightDirection, XMFLOAT3 clearColor, UINT width, UINT height)
 {
-	XMFLOAT2 subdivisions = XMFLOAT2(1 / static_cast<float>(width), 1 / static_cast<float>(height));
-	XMFLOAT3 inkColorX = XMFLOAT3(inkColor[0], inkColor[1], inkColor[2]);
-	XMFLOAT3 channelOffsetsX = XMFLOAT3(channelOffsets[0], channelOffsets[1], channelOffsets[2]);
-	
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT result = deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
+	XMFLOAT2 offset = { m_halftoneBuffer.dotSize / static_cast<float>(width), m_halftoneBuffer.dotSize / static_cast<float>(height) };
 
-	HalftoneBufferType* dataPtr = (HalftoneBufferType*)mappedResource.pData;
+	m_halftoneBuffer.subdivisions = offset;
 
-	// TODO: fix
-	dataPtr->isMonotone = isMonotone;
-	dataPtr->subdivisions = subdivisions;
-	dataPtr->dotColor = inkColorX;
-	dataPtr->channelOffsets = channelOffsetsX;
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
 
+	deviceContext->Map(m_constantBuffers[0].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	std::memcpy(mapped.pData, &m_halftoneBuffer, sizeof(m_halftoneBuffer));
 	deviceContext->Unmap(m_constantBuffers[0].Get(), 0);
-
-	return true;
 }

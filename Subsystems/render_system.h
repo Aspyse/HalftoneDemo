@@ -9,6 +9,8 @@
 #include "effect.h"
 #include "geometry_pass.h"
 #include "canny_pass.h" // temp
+#include "flat_pass.h"
+#include "crosshatch_pass.h"
 #include "out_pass.h"
 #include "render_pass.h"
 

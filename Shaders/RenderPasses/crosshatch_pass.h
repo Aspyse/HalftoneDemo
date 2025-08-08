@@ -12,10 +12,6 @@ class CrosshatchPass : public RenderPass
 private:
 	struct CrosshatchBufferType
 	{
-		XMFLOAT2 offset;
-		float thicknessMul;
-		float topoFreqMul;
-
 		XMFLOAT3 lightDirectionVS;
 		float thresholdA;
 
@@ -25,12 +21,31 @@ private:
 		XMFLOAT3 clearColor;
 		float hatchAngle;
 
+		float thicknessMul;
+		float topoFreqMul;
 		int isFeather;
 		float padding;
+
+		CrosshatchBufferType() :
+			thresholdA(0.35),
+			thresholdB(0.6),
+			thicknessMul(1),
+			hatchAngle(0.785),
+			inkColor{ 0.5, 0.5, 0.5 }
+		{ }
 	};
 
 public:
-	bool SetShaderParameters(ID3D11DeviceContext*, float, float, XMFLOAT3, float*, float, float, float*, float, bool);
+	CrosshatchPass()
+	{
+		m_inputs.resize(1);
+		m_outputs = {
+			"crosshatch_out"
+		};
+	}
+
+	void Update(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX, XMVECTOR, XMFLOAT3, UINT, UINT) override;
+	std::vector<ParameterControl> GetParameters() override;
 
 protected:
 	const wchar_t* filename() const
@@ -40,4 +55,6 @@ protected:
 
 private:
 	bool InitializeConstantBuffer(ID3D11Device*) override;
+
+	CrosshatchBufferType m_crosshatchBuffer;
 };

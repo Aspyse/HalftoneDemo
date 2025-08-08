@@ -149,6 +149,7 @@ std::vector<RenderPass::ParameterControl> CannyPass::GetParameters()
 	return {
 		{ "Input", RenderPass::WidgetType::RENDER_TARGET, std::ref(m_inputs[0]) },
 		{ "Gaussian Radius", RenderPass::WidgetType::INT, std::ref(m_gaussianBuffer.kernelRadius) },
+		{ "Non-maximum Suppression", RenderPass::WidgetType::CHECKBOX, std::ref(m_nmsBuffer.isNMS) },
 		{ "Is Depth", RenderPass::WidgetType::CHECKBOX, std::ref(m_gaussianBuffer.isDepth) },
 		{ "Is Single Channel", RenderPass::WidgetType::CHECKBOX, std::ref(m_sobelBuffer.isMono) },
 		{ "Stroke Color", RenderPass::WidgetType::COLOR, std::ref(m_dilateBuffer.inkColor) },
