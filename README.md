@@ -11,7 +11,7 @@
  <a href="https://opensource.org/license/mit"><img src="https://img.shields.io/github/license/Aspyse/HalftoneDemo"></a>
 </p>
 
-<p align="center">User-friendly, no-code methods for developing real-time applications with non-photorealistic rendering. Control intuitive parameters, then chain render passes and render textures to create a custom multi-pass pipeline.</p>
+<p align="center">User-friendly, no-code methods for developing custom real-time, non-photorealistic graphics. Tweak intuitive parameters and combine a prebuilt set of render passes to create your own stylized rendering effects.</p>
 
 
 ## Video Demo
@@ -53,3 +53,10 @@ In a command prompt, run:
 ```sh
 .\out\build\x64-release\HalftoneDemo.exe
 ```
+
+
+## Libraries Used
+
+- [miniPLY](https://github.com/vilya/miniply)
+- [fastGLTF](https://github.com/spnda/fastgltf)
+- [DirectX Tool Kit](https://github.com/microsoft/DirectXTK)
